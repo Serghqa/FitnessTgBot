@@ -24,7 +24,7 @@ async def is_trainer(
 ):
     await dialog_manager.switch_to(
         state=start_states.StartSG.trainer_validate,
-        show_mode=ShowMode.DELETE_AND_SEND
+        show_mode=ShowMode.EDIT
     )
 
 
@@ -35,8 +35,7 @@ async def to_trainer_dialog(
 ):
     await dialog_manager.start(
         state=trainer_states.TrainerState.main,
-        mode=StartMode.RESET_STACK,
-        show_mode=ShowMode.EDIT
+        mode=StartMode.RESET_STACK
     )
 
 
@@ -58,8 +57,7 @@ async def to_client_dialog(
 ):
     await dialog_manager.start(
         state=client_states.ClientState.main,
-        mode=StartMode.RESET_STACK,
-        show_mode=ShowMode.EDIT
+        mode=StartMode.RESET_STACK
     )
 
 
@@ -72,7 +70,6 @@ async def cancel_is_trainer(
 ):
     await dialog_manager.switch_to(
         state=start_states.StartSG.start,
-        show_mode=ShowMode.EDIT
     )
 
 
@@ -82,8 +79,7 @@ async def cancel_is_client(
         dialog_manager: DialogManager
 ):
     await dialog_manager.switch_to(
-        state=start_states.StartSG.start,
-        show_mode=ShowMode.EDIT
+        state=start_states.StartSG.start
      )
 
 
@@ -127,8 +123,7 @@ async def correct_code(
     data_base['trainers'][str(message.from_user.id)] = {}
     await dialog_manager.start(
         state=trainer_states.TrainerState.main,
-        mode=StartMode.RESET_STACK,
-        show_mode=ShowMode.EDIT
+        mode=StartMode.RESET_STACK
     )
 
 
@@ -153,8 +148,7 @@ async def correct_group_code(
     data_base['clients'][client_id] = trainer_id
     await dialog_manager.start(
         state=client_states.ClientState.main,
-        mode=StartMode.RESET_STACK,
-        show_mode=ShowMode.EDIT
+        mode=StartMode.RESET_STACK
     )
 
 
