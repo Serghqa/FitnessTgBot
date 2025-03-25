@@ -120,7 +120,10 @@ async def correct_code(
         dialog_manager: DialogManager,
         text: str
 ):
-    data_base['trainers'][str(message.from_user.id)] = {}
+    trainer_id = str(message.from_user.id)
+    data_base['trainers'][trainer_id] = [
+        (str(client_id), str(client_id)) for client_id in range(100001, 100010)
+    ]
     await dialog_manager.start(
         state=trainer_states.TrainerState.main,
         mode=StartMode.RESET_STACK

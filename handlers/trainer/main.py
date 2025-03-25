@@ -16,4 +16,5 @@ async def to_group(
     widget: Button,
     dialog_manager: DialogManager
 ):
+    dialog_manager.dialog_data['frame'] = {'start': 0, 'step': 5}
     await dialog_manager.switch_to(state=TrainerState.group)
