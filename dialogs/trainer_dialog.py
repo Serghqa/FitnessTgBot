@@ -5,14 +5,23 @@ from operator import itemgetter
 from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram.types import CallbackQuery
 from aiogram_dialog.widgets.text import Format, Const
-from aiogram_dialog.widgets.kbd import Button, Select, Group, Row
+from aiogram_dialog.widgets.kbd import Button, Select, Group, Row, Radio
+from aiogram_dialog.widgets.input import TextInput, MessageInput
+from aiogram.enums import ContentType
 from states import TrainerState
 from tmp_db import data_base
 
 logger = logging.getLogger(__name__)
 
+to_main_window = Button(
+    text=Const('На главную'),
+    id='to_main',
+    on_click=handlers.to_main_trainer_window,
+)
+
 
 tariner_dialog = Dialog(
+    #  Главное окно тренера
     Window(
         Format(
             text='Главное окно тренера',
@@ -20,10 +29,42 @@ tariner_dialog = Dialog(
         Button(
             text=Const('Моя группа'),
             id='my_group',
-            on_click=handlers.trainer.main.to_group,
+            on_click=handlers.to_group_window,
+        ),
+        Button(
+            text=Const('Сделать объявление'),
+            id='send_message',
+            on_click=handlers.to_message_window,
         ),
         state=TrainerState.main,
     ),
+    #  Окно отправки объявления
+    Window(
+        Format(
+            text='Отправить файл или текст',
+        ),
+        Radio(
+            Format(
+                text='🔘 {item[0]}'
+            ),
+            Format(
+                text='⚪️ {item[0]}'
+            ),
+            id='send_checked',
+            item_id_getter=itemgetter(1),
+            items='radio',
+            on_click=handlers.process_selection,
+        ),
+        MessageInput(
+            func=handlers.send_message,
+            content_types=ContentType.ANY,
+            filter=lambda x: True,
+        ),
+        to_main_window,
+        getter=handlers.message_data,
+        state=TrainerState.message,
+    ),
+    #  Окно группы
     Window(
         Format(
             text='Окно группы {trainer_id}',
@@ -35,8 +76,9 @@ tariner_dialog = Dialog(
                   id='client_select',
                   item_id_getter=itemgetter(1),
                   items='group',
+                  on_click=handlers.on_client,
                 ),
-                id='client_group',
+                id='client_select',
                 width=1,
             ),
             Row(
@@ -48,15 +90,11 @@ tariner_dialog = Dialog(
                     text=Const('Вперед'),
                     id='group_next',
                 ),
-                id='row',
+                id='row_group',
             ),
         ),
-        Button(
-            text=Const('На главную'),
-            id='to_main',
-            on_click=handlers.trainer.group.to_main,
-        ),
-        getter=handlers.trainer.group.get_data_group,
+        to_main_window,
+        getter=handlers.trainer.get_data_group,
         state=TrainerState.group,
     ),
 )

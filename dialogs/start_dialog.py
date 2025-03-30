@@ -13,16 +13,19 @@ from aiogram_dialog import (
 )
 from aiogram_dialog.widgets.text import Format, Const
 from aiogram_dialog.widgets.kbd import Button, Row
-from aiogram_dialog.widgets.input import (
-    TextInput,
-    MessageInput
-)
+from aiogram_dialog.widgets.input import TextInput
 from states import StartSG
 
 
 logger = logging.getLogger(__name__)
 
 router = Router()
+
+to_main_window = Button(
+    text=Const('Отмена'),
+    id='to_main',
+    on_click=handlers.to_main_start_window,
+)
 
 
 @router.message(F.text, CommandStart())
@@ -69,7 +72,7 @@ start_dialog = Dialog(
         Row(
             Button(
                 text=Const('В тренерскую'),
-                id='to_tariner_dialog',
+                id='to_tr_dlg',
                 on_click=handlers.to_trainer_dialog,
                 when='trainer',
             ),
@@ -77,7 +80,7 @@ start_dialog = Dialog(
         Row(
             Button(
                 text=Const('В группу'),
-                id='to_client_dialog',
+                id='to_cl_dlg',
                 on_click=handlers.to_client_dialog,
                 when='client',
             ),
@@ -89,20 +92,12 @@ start_dialog = Dialog(
         Format(
             text='Подтвердите, ваш статус тренера, введите код:',
         ),
-        Button(
-            text=Const('Отмена'),
-            id='cancel_is_trainer',
-            on_click=handlers.cancel_is_trainer,
-        ),
+        to_main_window,
         TextInput(
-            id='validate_trainer_code',
-            type_factory=handlers.is_valid_code,
-            on_success=handlers.correct_code,
+            id='tr_valid',
+            type_factory=handlers.valid_code,
+            on_success=handlers.successful_code,
             on_error=handlers.error_code,
-        ),
-        MessageInput(
-            func=handlers.incorrect_data,
-            content_types=ContentType.ANY,
         ),
         state=StartSG.trainer_validate,
     ),
@@ -110,20 +105,12 @@ start_dialog = Dialog(
         Format(
             text='Введите номер вашей группы:'
         ),
-        Button(
-            text=Const('Отмена'),
-            id='cancel_is_client',
-            on_click=handlers.cancel_is_client,
-        ),
+        to_main_window,
         TextInput(
-            id='validate_group_code',
-            type_factory=handlers.is_valid_group_code,
-            on_success=handlers.correct_group_code,
-            on_error=handlers.error_group_code,
-        ),
-        MessageInput(
-            func=handlers.incorrect_data,
-            content_types=ContentType.ANY,
+            id='gr_valid',
+            type_factory=handlers.is_valid_client,
+            on_success=handlers.successful_client_code,
+            on_error=handlers.error_code,
         ),
         state=StartSG.client_validate,
     ),
