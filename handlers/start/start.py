@@ -2,7 +2,7 @@ import logging
 
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import DialogManager, StartMode, ShowMode
-from aiogram_dialog.widgets.input import MessageInput, ManagedTextInput
+from aiogram_dialog.widgets.input import ManagedTextInput
 from aiogram_dialog.widgets.kbd import Button
 from typing import Any, Callable
 from functools import wraps
@@ -95,7 +95,7 @@ def get_valid_variable(type_factory: Callable):
 
 @get_valid_variable
 def is_valid_code(value: Any, config: Config) -> str:
-    if isinstance(value, str) and value == config.tg_bot.IS_TRAINER:
+    if value == config.tg_bot.IS_TRAINER:
         return value
     raise ValueError
 
@@ -104,14 +104,6 @@ def is_valid_group_code(value: Any) -> str:
     if isinstance(value, str) and value in data_base['trainers']:
         return value
     raise ValueError
-
-
-async def incorrect_data(
-        message: Message,
-        widget: MessageInput,
-        dialog_manager: DialogManager
-):
-    await message.answer(text='Incorrect code')
 
 
 async def correct_code(

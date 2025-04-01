@@ -4,7 +4,6 @@ import handlers
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import CommandStart
-from aiogram.enums import ContentType
 from aiogram_dialog import (
     DialogManager,
     StartMode,
@@ -13,10 +12,7 @@ from aiogram_dialog import (
 )
 from aiogram_dialog.widgets.text import Format, Const
 from aiogram_dialog.widgets.kbd import Button, Row
-from aiogram_dialog.widgets.input import (
-    TextInput,
-    MessageInput
-)
+from aiogram_dialog.widgets.input import TextInput
 from states import StartSG
 
 
@@ -100,10 +96,6 @@ start_dialog = Dialog(
             on_success=handlers.correct_code,
             on_error=handlers.error_code,
         ),
-        MessageInput(
-            func=handlers.incorrect_data,
-            content_types=ContentType.ANY,
-        ),
         state=StartSG.trainer_validate,
     ),
     Window(
@@ -120,10 +112,6 @@ start_dialog = Dialog(
             type_factory=handlers.is_valid_group_code,
             on_success=handlers.correct_group_code,
             on_error=handlers.error_group_code,
-        ),
-        MessageInput(
-            func=handlers.incorrect_data,
-            content_types=ContentType.ANY,
         ),
         state=StartSG.client_validate,
     ),
