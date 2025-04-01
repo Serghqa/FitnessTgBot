@@ -1,10 +1,10 @@
 import asyncio
 import logging
 import logging.config
+import dialogs
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, Router
 from aiogram_dialog import setup_dialogs
-from dialogs import router, start_dialog, tariner_dialog, client_dialog
 from logging_setting import logging_config
 from config import load_config, Config
 
@@ -16,12 +16,7 @@ async def main():
 
     bot = Bot(token=config.tg_bot.TOKEN)
     dp = Dispatcher()
-    dp.include_routers(
-        router,
-        start_dialog,
-        tariner_dialog,
-        client_dialog
-    )
+    dp.include_routers(dialogs.setup_all_dialogs(Router))
     setup_dialogs(dp)
 
     await bot.delete_webhook(drop_pending_updates=True)

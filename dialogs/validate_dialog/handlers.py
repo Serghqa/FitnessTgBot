@@ -4,18 +4,16 @@ from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import DialogManager, StartMode, ShowMode
 from aiogram_dialog.widgets.input import ManagedTextInput
 from aiogram_dialog.widgets.kbd import Button
-from typing import Any, Callable
+from typing import Callable
 from functools import wraps
 from string import ascii_lowercase, digits
-from config import load_config, Config
+#  from config import load_config, Config
 from states import start_states, trainer_states, client_states
 from tmp_db import data_base
 
 logger = logging.getLogger(__name__)
 simbols = ascii_lowercase + digits
 
-
-#  -----Start handlers-----
 
 async def is_trainer(
         callback: CallbackQuery,
@@ -61,9 +59,7 @@ async def to_client_dialog(
     )
 
 
-#  -----Trainer validate handlers-----
-
-async def cancel_is_trainer(
+async def to_main_start_window(
         callback: CallbackQuery,
         widget: Button,
         dialog_manager: DialogManager
@@ -73,40 +69,30 @@ async def cancel_is_trainer(
     )
 
 
-async def cancel_is_client(
-        callback: CallbackQuery,
-        widget: Button,
-        dialog_manager: DialogManager
-):
-    await dialog_manager.switch_to(
-        state=start_states.StartSG.start
-     )
-
-
 def get_valid_variable(type_factory: Callable):
-    config: Config = load_config()
+    #  config: Config = load_config()
 
     @wraps(type_factory)
-    def wrapper(value: Any):
-        result = type_factory(value, config)
+    def wrapper(code: str):
+        #  if code != config.tg_bot.IS_TRAINER:
+        #    raise ValueError
+        result = type_factory(code)
         return result
     return wrapper
 
 
 @get_valid_variable
-def is_valid_code(value: Any, config: Config) -> str:
-    if value == config.tg_bot.IS_TRAINER:
-        return value
+def valid_code(code: str) -> str:
+    return code
+
+
+def is_valid_client(code: str) -> str:
+    if code in data_base['trainers']:
+        return code
     raise ValueError
 
 
-def is_valid_group_code(value: Any) -> str:
-    if isinstance(value, str) and value in data_base['trainers']:
-        return value
-    raise ValueError
-
-
-async def correct_code(
+async def successful_code(
         message: Message,
         widget: ManagedTextInput,
         dialog_manager: DialogManager,
@@ -131,7 +117,7 @@ async def error_code(
     await message.answer(text='Error code')
 
 
-async def correct_group_code(
+async def successful_client_code(
     message: Message,
     widget: ManagedTextInput,
     dialog_manager: DialogManager,
@@ -145,25 +131,3 @@ async def correct_group_code(
         state=client_states.ClientState.main,
         mode=StartMode.RESET_STACK
     )
-
-
-async def error_group_code(
-    message: Message,
-    widget: ManagedTextInput,
-    dialog_manager: DialogManager,
-    error: ValueError
-):
-    await message.answer(text='Error code')
-
-
-#  -----Getters-----
-
-async def get_data(**kwargs):
-    user_id = str(kwargs['event_from_user'].id)
-    is_trainer = user_id in data_base['trainers']
-    is_client = user_id in data_base['clients']
-    return {
-        'user': is_trainer or is_client,
-        'trainer': is_trainer,
-        'client': is_client
-    }
