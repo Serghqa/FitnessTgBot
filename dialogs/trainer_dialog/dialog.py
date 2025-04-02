@@ -13,7 +13,8 @@ from .handlers import (
     on_client,
     to_message_window,
     send_message,
-    process_selection
+    process_selection,
+    set_radio_default
 )
 from .getters import get_data_group, message_data
 
@@ -103,4 +104,5 @@ tariner_dialog = Dialog(
         getter=get_data_group,
         state=TrainerState.group,
     ),
+    on_start=set_radio_default,
 )

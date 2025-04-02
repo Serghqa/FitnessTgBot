@@ -59,3 +59,11 @@ async def process_selection(
         item_id: str
 ):
     print(item_id)
+
+
+async def set_radio_default(
+    _,
+    dialog_manager: DialogManager
+):
+    radio: ManagedRadio = dialog_manager.find('send_checked')
+    await radio.set_checked('1')
