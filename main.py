@@ -5,8 +5,12 @@ import dialogs
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram_dialog import setup_dialogs
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from logging_setting import logging_config
 from config import load_config, Config
+from middleware import DbSessionMiddleware
+from db import Base
 
 
 async def main():
@@ -14,8 +18,16 @@ async def main():
 
     config: Config = load_config()
 
+    engine = create_engine(url='sqlite:///Fitnes.db', echo=False)
+
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+
+    Session = sessionmaker(engine, expire_on_commit=False)
+
     bot = Bot(token=config.tg_bot.TOKEN)
     dp = Dispatcher()
+    dp.update.middleware(DbSessionMiddleware(Session))
     dp.include_routers(dialogs.setup_all_dialogs(Router))
     setup_dialogs(dp)
 
