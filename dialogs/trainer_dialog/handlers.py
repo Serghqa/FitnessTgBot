@@ -4,7 +4,9 @@ from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.kbd import Button, Select, ManagedRadio
 from aiogram_dialog.widgets.input import MessageInput
+from sqlalchemy.orm import Session
 from states.trainer_states import TrainerState
+from db import get_trainer
 
 
 logger = logging.getLogger(__name__)
@@ -15,7 +17,11 @@ async def to_group_window(
     widget: Button,
     dialog_manager: DialogManager
 ):
-    dialog_manager.dialog_data['frame'] = {'start': 0, 'step': 5}
+    trainer_id = dialog_manager.start_data.get('id')
+    session: Session = dialog_manager.middleware_data.get('session')
+    group: list = get_trainer(session, trainer_id, trainer_id).get('group')
+    data = {'group': group, 'frame': {'start': 0, 'step': 3}}
+    dialog_manager.dialog_data['data'] = data
     await dialog_manager.switch_to(state=TrainerState.group)
 
 

@@ -37,7 +37,7 @@ start_dialog = Dialog(
         ),
         Format(
             text='Привет, выбери статус:',
-            when=~F['user'],
+            when=F['user'],
         ),
         Format(
             text='Привет тренер',
@@ -58,7 +58,7 @@ start_dialog = Dialog(
                 id='is_client',
                 on_click=is_client,
             ),
-            when=~F['user'],
+            when=F['user'],
         ),
         Row(
             Button(

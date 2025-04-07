@@ -74,7 +74,7 @@ tariner_dialog = Dialog(
     #  Окно группы
     Window(
         Format(
-            text='Окно группы {trainer_id}',
+            text='Окно группы',
         ),
         Group(
             Group(
@@ -97,7 +97,7 @@ tariner_dialog = Dialog(
                     text=Const('Вперед'),
                     id='group_next',
                 ),
-                id='row_group',
+                id='frame_group',
             ),
         ),
         to_main_window,

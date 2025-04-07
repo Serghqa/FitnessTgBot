@@ -9,6 +9,7 @@ from functools import wraps
 from string import ascii_lowercase, digits
 #  from config import load_config, Config
 from states import start_states, trainer_states, client_states
+from db import add_user_db, get_trainer, get_client
 from tmp_db import data_base
 
 logger = logging.getLogger(__name__)
@@ -98,11 +99,18 @@ async def successful_code(
         dialog_manager: DialogManager,
         text: str
 ):
-    trainer_id = str(message.from_user.id)
-    data_base['trainers'][trainer_id] = [
-        (str(client_id), str(client_id)) for client_id in range(100001, 100010)
-    ]
+    trainer_id = message.from_user.id
+    name = message.from_user.full_name
+    session = dialog_manager.middleware_data.get('session')
+    add_user_db(session,trainer_id, name)
+    ids = [123456780, 123654789, 456789123, 159753654, 456369852, 456369855]
+    names = ['sedhh', 'hgvghd', 'hjgtd', 'ghfgcxfdxf', 'ghcfgxdf', 'fvccszsd']
+    for i in range(len(ids)):
+        add_user_db(session, ids[i], names[i], trainer_id)
+    trainer: dict = get_trainer(session, trainer_id, trainer_id)
+
     await dialog_manager.start(
+        data=trainer,
         state=trainer_states.TrainerState.main,
         mode=StartMode.RESET_STACK
     )
