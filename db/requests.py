@@ -10,6 +10,7 @@ def add_user_db(
 ) -> None:
     
     user: Trainer | Client = set_user(user_id, name, trainer_id)
+    user = set_user(user_id, name, trainer_id)
 
     session.add(user)
     session.commit()
