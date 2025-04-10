@@ -1,3 +1,4 @@
+from aiogram_dialog import DialogManager
 from db.models import set_user, Trainer, Client
 from sqlalchemy.orm import Session
 
@@ -8,7 +9,7 @@ def add_user_db(
     name: str,
     trainer_id: int = None
 ) -> None:
-    
+
     user: Trainer | Client = set_user(user_id, name, trainer_id)
     user = set_user(user_id, name, trainer_id)
 
@@ -16,32 +17,39 @@ def add_user_db(
     session.commit()
 
 
-def get_trainer(
+def get_data_user(
     session: Session,
-    user_id: int,
-    group: int = None
-) -> dict:
-    
-    user = session.get(Trainer, user_id)
-    if not user:
-        return
+    dialog_manager: DialogManager,
+    group=False
+) -> dict[str, str | int]:
 
-    data = {'id': user.trainer_id, 'name': user.name}
-    if group:
-        clients = [{'client_id': client.client_id, 'name': client.name} for client in user.group]
-        data['group'] = clients
+    trainer, client, user_name = None, None, None
+    user_id = dialog_manager.event.from_user.id
+
+    client = session.get(Client, user_id)
+    if not client:
+        trainer = session.get(Trainer, user_id)
+        if trainer and group:
+            group = [
+                {
+                    'client_id': user.client_id,
+                    'name': user.name,
+                    'workouts': user.workouts
+                 }
+                for user in trainer.group
+            ]
+
+    if client:
+        user_name = client.name
+    elif trainer:
+        user_name = trainer.name
+
+    data = {
+        'user': not trainer and not client,
+        'client': client,
+        'trainer': trainer,
+        'id': user_id,
+        'name': user_name,
+        'group': group
+    }
     return data
-
-
-def get_client(
-    session: Session,
-    user_id: int
-) -> dict:
-    
-    user = session.get(Client, user_id)
-    if not user:
-        return
-    
-    data = {'id': user.client_id, 'name': user.name}
-    return data
-    

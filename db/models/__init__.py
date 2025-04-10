@@ -6,14 +6,18 @@ def set_user(
     name: str,
     trainer_id: int = None
 ) -> Trainer | Client:
-    
+
     if trainer_id:
         return Client(
-            client_id = user_id, 
-            name = name,
-            trainer_id = trainer_id
+            client_id=user_id,
+            name=name,
+            trainer_id=trainer_id
         )
+
     return Trainer(
-        trainer_id = user_id,
-        name = name
+        trainer_id=user_id,
+        name=name
     )
+
+
+__all__ = [set_user, Base]

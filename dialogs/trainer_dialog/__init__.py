@@ -1,6 +1,6 @@
 from aiogram import Router
-from .dialog import tariner_dialog
+from .dialog import trainer_dialog
 
 
 def setup(router: Router):
-    router.include_router(tariner_dialog)
+    router.include_router(trainer_dialog)

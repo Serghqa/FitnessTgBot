@@ -1,6 +1,5 @@
 import logging
 
-from aiogram import F
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Format, Const
 from aiogram_dialog.widgets.kbd import Button, Row
@@ -30,14 +29,14 @@ to_main_window = Button(
 )
 
 
-start_dialog = Dialog(
+validate_dialog = Dialog(
     Window(
         Format(
             text='Главное стартовое окно',
         ),
         Format(
             text='Привет, выбери статус:',
-            when=F['user'],
+            when='user',
         ),
         Format(
             text='Привет тренер',
@@ -58,7 +57,7 @@ start_dialog = Dialog(
                 id='is_client',
                 on_click=is_client,
             ),
-            when=F['user'],
+            when='user',
         ),
         Row(
             Button(

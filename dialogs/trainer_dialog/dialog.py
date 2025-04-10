@@ -14,9 +14,11 @@ from .handlers import (
     to_message_window,
     send_message,
     process_selection,
-    set_radio_default
+    set_radio_default,
+    process_result
 )
 from .getters import get_data_group, message_data
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ to_main_window = Button(
 )
 
 
-tariner_dialog = Dialog(
+trainer_dialog = Dialog(
     #  Главное окно тренера
     Window(
         Format(
@@ -85,7 +87,7 @@ tariner_dialog = Dialog(
                   items='group',
                   on_click=on_client,
                 ),
-                id='client_select',
+                id='client_group',
                 width=1,
             ),
             Row(
@@ -97,7 +99,7 @@ tariner_dialog = Dialog(
                     text=Const('Вперед'),
                     id='group_next',
                 ),
-                id='frame_group',
+                id='scroll_group',
             ),
         ),
         to_main_window,
@@ -105,4 +107,5 @@ tariner_dialog = Dialog(
         state=TrainerState.group,
     ),
     on_start=set_radio_default,
+    on_process_result=process_result,
 )

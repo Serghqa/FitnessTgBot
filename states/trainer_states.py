@@ -5,3 +5,4 @@ class TrainerState(StatesGroup):
     main = State()
     group = State()
     message = State()
+    client = State()

@@ -1,6 +1,7 @@
 from aiogram import Router
-from .dialog import start_dialog
+from .dialog import validate_dialog
 
 
 def setup(router: Router):
-    router.include_router(start_dialog)
+
+    router.include_router(validate_dialog)

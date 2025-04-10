@@ -9,7 +9,7 @@ from functools import wraps
 from string import ascii_lowercase, digits
 #  from config import load_config, Config
 from states import start_states, trainer_states, client_states
-from db import add_user_db, get_trainer, get_client
+from db import add_user_db, get_data_user
 from tmp_db import data_base
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,7 @@ async def is_trainer(
         widget: Button,
         dialog_manager: DialogManager
 ):
+
     await dialog_manager.switch_to(
         state=start_states.StartSG.trainer_validate,
         show_mode=ShowMode.EDIT
@@ -32,6 +33,7 @@ async def to_trainer_dialog(
     widget: Button,
     dialog_manager: DialogManager
 ):
+
     await dialog_manager.start(
         state=trainer_states.TrainerState.main,
         mode=StartMode.RESET_STACK
@@ -43,6 +45,7 @@ async def is_client(
         widget: Button,
         dialog_manager: DialogManager
 ):
+
     await dialog_manager.switch_to(
         state=start_states.StartSG.client_validate,
         show_mode=ShowMode.EDIT
@@ -54,6 +57,7 @@ async def to_client_dialog(
     widget: Button,
     dialog_manager: DialogManager
 ):
+
     await dialog_manager.start(
         state=client_states.ClientState.main,
         mode=StartMode.RESET_STACK
@@ -65,6 +69,7 @@ async def to_main_start_window(
         widget: Button,
         dialog_manager: DialogManager
 ):
+
     await dialog_manager.switch_to(
         state=start_states.StartSG.start,
     )
@@ -79,17 +84,21 @@ def get_valid_variable(type_factory: Callable):
         #    raise ValueError
         result = type_factory(code)
         return result
+
     return wrapper
 
 
 @get_valid_variable
 def valid_code(code: str) -> str:
+
     return code
 
 
 def is_valid_client(code: str) -> str:
+
     if code in data_base['trainers']:
         return code
+
     raise ValueError
 
 
@@ -99,18 +108,20 @@ async def successful_code(
         dialog_manager: DialogManager,
         text: str
 ):
+
     trainer_id = message.from_user.id
     name = message.from_user.full_name
     session = dialog_manager.middleware_data.get('session')
-    add_user_db(session,trainer_id, name)
+    add_user_db(session, trainer_id, name)
     ids = [123456780, 123654789, 456789123, 159753654, 456369852, 456369855]
     names = ['sedhh', 'hgvghd', 'hjgtd', 'ghfgcxfdxf', 'ghcfgxdf', 'fvccszsd']
     for i in range(len(ids)):
         add_user_db(session, ids[i], names[i], trainer_id)
-    trainer: dict = get_trainer(session, trainer_id, trainer_id)
+
+    user_data = get_data_user(session, dialog_manager)
 
     await dialog_manager.start(
-        data=trainer,
+        data=user_data,
         state=trainer_states.TrainerState.main,
         mode=StartMode.RESET_STACK
     )
@@ -122,6 +133,7 @@ async def error_code(
         dialog_manager: DialogManager,
         error: ValueError
 ):
+
     await message.answer(text='Error code')
 
 
@@ -131,6 +143,7 @@ async def successful_client_code(
     dialog_manager: DialogManager,
     text: str
 ):
+
     trainer_id = text
     client_id = str(message.from_user.id)
     data_base['trainers'][trainer_id].update({client_id: {}})
