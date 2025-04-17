@@ -1,5 +1,5 @@
-from .models import Base
-from .requests import add_user_db, get_data_user
+from .models import Base, Client, Trainer
+from .requests import add_trainer_db, add_client_db, get_data_user, update_data_client, get_user
 
 
-__all__ = [Base, add_user_db, get_data_user]
+__all__ = [Base, Client, Trainer, add_trainer_db, add_client_db, get_data_user, update_data_client, get_user]

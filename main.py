@@ -14,6 +14,7 @@ from db import Base
 
 
 async def main():
+
     logging.config.dictConfig(logging_config)
 
     config: Config = load_config()

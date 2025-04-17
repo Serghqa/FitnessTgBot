@@ -1,5 +1,3 @@
-import logging
-
 from operator import itemgetter
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Format, Const
@@ -15,12 +13,9 @@ from .handlers import (
     send_message,
     process_selection,
     set_radio_default,
-    process_result
 )
-from .getters import get_data_group, message_data
+from .getters import get_data, get_data_group, message_data
 
-
-logger = logging.getLogger(__name__)
 
 to_main_window = Button(
     text=Const('На главную'),
@@ -33,7 +28,7 @@ trainer_dialog = Dialog(
     #  Главное окно тренера
     Window(
         Format(
-            text='Главное окно тренера',
+            text='Главное окно тренера {id}',
         ),
         Button(
             text=Const('Моя группа'),
@@ -45,6 +40,7 @@ trainer_dialog = Dialog(
             id='send_message',
             on_click=to_message_window,
         ),
+        getter=get_data,
         state=TrainerState.main,
     ),
     #  Окно отправки объявления
@@ -107,5 +103,4 @@ trainer_dialog = Dialog(
         state=TrainerState.group,
     ),
     on_start=set_radio_default,
-    on_process_result=process_result,
 )

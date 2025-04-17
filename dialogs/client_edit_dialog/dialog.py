@@ -1,11 +1,10 @@
-import logging
-
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
-from aiogram_dialog.widgets.kbd import Button, Row
+from aiogram_dialog.widgets.kbd import Button, Row, Back
 from states import ClientEditState
-from .handlers import done, workout_edit, workout_add, workout_apply
-from .getters import get_data, get_workout
+from .handlers import done, workout_edit, workout_add, workout_apply, workout_sub
+from .getters import get_data
+
 
 to_back_dialog_group = Button(
     text=Const('В группу'),
@@ -17,26 +16,25 @@ to_back_dialog_group = Button(
 client_edit_dialog = Dialog(
     Window(
         Format(
-            text='Окно клиента {name}\nТренеровок {workouts}',
+            text='Окно клиента {name}\nТренировок {workouts}',
         ),
         Button(
-            text=Const('Тренеровки'),
+            text=Const('Тренировки'),
             id='edit_workout',
             on_click=workout_edit,
         ),
         to_back_dialog_group,
-        getter=get_data,
         state=ClientEditState.main,
     ),
     Window(
         Format(
-            text='Тренеровок {workouts}\nИзменить на {workout}',
+            text='Тренировок {workouts}\nИзменить на {workout}',
         ),
         Row(
             Button(
                 text=Const('-'),
                 id='add',
-                on_click=workout_add,
+                on_click=workout_sub,
             ),
             Button(
                 text=Const('Применить'),
@@ -50,7 +48,15 @@ client_edit_dialog = Dialog(
             ),
             id='workout_row',
         ),
-        getter=get_workout,
+        Row(
+            Back(
+                text=Const('Назад'),
+                id='back',
+            ),
+            to_back_dialog_group,
+            id='back_row',
+        ),
         state=ClientEditState.workout_edit,
     ),
+    getter=get_data,
 )

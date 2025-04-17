@@ -4,13 +4,15 @@ from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import DialogManager, StartMode, ShowMode
 from aiogram_dialog.widgets.input import ManagedTextInput
 from aiogram_dialog.widgets.kbd import Button
+from sqlalchemy.orm import Session
 from typing import Callable
 from functools import wraps
 from string import ascii_lowercase, digits
 #  from config import load_config, Config
 from states import start_states, trainer_states, client_states
-from db import add_user_db, get_data_user
+from db import Trainer, Client, add_trainer_db, add_client_db, get_data_user
 from tmp_db import data_base
+
 
 logger = logging.getLogger(__name__)
 simbols = ascii_lowercase + digits
@@ -34,7 +36,13 @@ async def to_trainer_dialog(
     dialog_manager: DialogManager
 ):
 
+    session: Session = dialog_manager.middleware_data.get('session')
+    trainer_id = dialog_manager.event.from_user.id
+
+    user_data = get_data_user(session, trainer_id, Trainer)
+
     await dialog_manager.start(
+        data=user_data,
         state=trainer_states.TrainerState.main,
         mode=StartMode.RESET_STACK
     )
@@ -111,14 +119,15 @@ async def successful_code(
 
     trainer_id = message.from_user.id
     name = message.from_user.full_name
-    session = dialog_manager.middleware_data.get('session')
-    add_user_db(session, trainer_id, name)
+    session: Session = dialog_manager.middleware_data.get('session')
+    
+    add_trainer_db(session, trainer_id, name)
     ids = [123456780, 123654789, 456789123, 159753654, 456369852, 456369855]
     names = ['sedhh', 'hgvghd', 'hjgtd', 'ghfgcxfdxf', 'ghcfgxdf', 'fvccszsd']
     for i in range(len(ids)):
-        add_user_db(session, ids[i], names[i], trainer_id)
+        add_client_db(session, ids[i], names[i], trainer_id)
 
-    user_data = get_data_user(session, dialog_manager)
+    user_data = get_data_user(session, trainer_id, Trainer)
 
     await dialog_manager.start(
         data=user_data,

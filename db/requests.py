@@ -1,55 +1,86 @@
 from aiogram_dialog import DialogManager
-from db.models import set_user, Trainer, Client
+from db.models import set_trainer, set_client, Trainer, Client
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from typing import Any
 
 
-def add_user_db(
+def add_trainer_db(
     session: Session,
     user_id: int,
     name: str,
-    trainer_id: int = None
 ) -> None:
 
-    user: Trainer | Client = set_user(user_id, name, trainer_id)
-    user = set_user(user_id, name, trainer_id)
+    user: Trainer = set_trainer(user_id, name)
 
     session.add(user)
     session.commit()
 
 
+def add_client_db(
+    session: Session,
+    user_id: int,
+    name: str,
+    trainer_id: int
+) -> None:
+
+    user: Client = set_client(user_id, name, trainer_id)
+
+    session.add(user)
+    session.commit()
+
+
+def update_data_client(
+    session: Session,
+    client_id: int,
+    value: int
+) -> None:
+    
+    stmt = select(Client).where(client_id == Client.client_id)
+    res = session.execute(stmt)
+    client = res.scalar()
+    client.workouts = value
+
+    session.commit()
+    
+
+def get_user(
+    session: Session,
+    user_id: int,
+    user: Client | Trainer
+) -> Trainer | Client:
+    
+    user = session.get(user, user_id)
+
+    return user
+
+
 def get_data_user(
     session: Session,
-    dialog_manager: DialogManager,
-    group=False
-) -> dict[str, str | int]:
-
-    trainer, client, user_name = None, None, None
-    user_id = dialog_manager.event.from_user.id
-
-    client = session.get(Client, user_id)
-    if not client:
-        trainer = session.get(Trainer, user_id)
-        if trainer and group:
-            group = [
-                {
-                    'client_id': user.client_id,
-                    'name': user.name,
-                    'workouts': user.workouts
-                 }
-                for user in trainer.group
-            ]
-
-    if client:
-        user_name = client.name
-    elif trainer:
-        user_name = trainer.name
-
+    user_id: int,
+    model: Client | Trainer = Client,
+    group = False
+) -> dict[str, Any]:
+    
     data = {
-        'user': not trainer and not client,
-        'client': client,
-        'trainer': trainer,
-        'id': user_id,
-        'name': user_name,
-        'group': group
+        'client': None,
+        'trainer': None,
+        'id': None,
+        'name': None,
+        'group': None,
+        'workouts': None,
+        'trainer_id': None
     }
+
+    if issubclass(model, Client):
+        user = get_user(session, user_id, model)
+
+    if issubclass(model, Trainer):
+        user = get_user(session, user_id, model)
+        
+    if user:
+        data.update(user.get_data())
+        if group:
+            data['group'] = user.get_group()
+
     return data

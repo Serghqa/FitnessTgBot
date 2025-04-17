@@ -7,6 +7,11 @@ from aiogram_dialog import DialogManager
 logger = logging.getLogger(__name__)
 
 
+async def get_data(dialog_manager: DialogManager, **kwargs):
+
+    return dialog_manager.start_data
+
+
 async def get_data_group(dialog_manager: DialogManager, **kwargs):
 
     FRAME: dict[str, int] = dialog_manager.dialog_data.get('frame')
