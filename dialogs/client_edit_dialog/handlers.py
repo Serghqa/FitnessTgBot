@@ -1,10 +1,11 @@
 import logging
 
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import DialogManager, ShowMode
 from aiogram_dialog.widgets.kbd import Button
+from aiogram_dialog.widgets.input import ManagedTextInput
 from sqlalchemy.orm import Session
-from db import update_data_client
+from db import update_workouts_client
 from states import ClientEditState
 
 
@@ -46,7 +47,7 @@ async def workout_sub(
     widget: Button,
     dialog_manager: DialogManager
 ):
-    
+
     workouts = dialog_manager.start_data['workouts']
 
     if workouts + (dialog_manager.start_data['workout'] - 1) > -1:
@@ -59,10 +60,42 @@ async def workout_apply(
     dialog_manager: DialogManager
 ):
 
-    client_id = dialog_manager.start_data['id']
-    value = dialog_manager.start_data['workout'] + dialog_manager.start_data['workouts']
-    session: Session = dialog_manager.middleware_data['session']
+    update_workouts_client(dialog_manager)
 
-    dialog_manager.start_data['workouts'] = value
-    dialog_manager.start_data['workout'] = 0
-    update_data_client(session, client_id, value) 
+
+def is_valid_type(code: str):
+
+    sign = ''
+
+    if code.startswith('-'):
+        sign = '-'
+        code = code[1:]
+
+    if code.isdigit() and int(code) < 100:
+        return sign + code
+
+    raise ValueError
+
+
+async def successful_code(
+        message: Message,
+        widget: ManagedTextInput,
+        dialog_manager: DialogManager,
+        text: str
+):
+
+    if text.startswith('-'):
+        dialog_manager.start_data['workout'] -= int(text[1:])
+
+    else:
+        dialog_manager.start_data['workout'] += int(text)
+
+
+async def error_code(
+        message: Message,
+        widget: ManagedTextInput,
+        dialog_manager: DialogManager,
+        error: ValueError
+):
+
+    await message.answer(text='Error code')

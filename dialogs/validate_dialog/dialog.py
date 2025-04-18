@@ -10,7 +10,7 @@ from .handlers import (
     is_client,
     to_client_dialog,
     to_main_start_window,
-    valid_code,
+    is_valid_trainer,
     is_valid_client,
     successful_code,
     error_code,
@@ -33,7 +33,7 @@ validate_dialog = Dialog(
         ),
         Format(
             text='Привет, выбери статус:',
-            when=~F['trainer']&~F['client'],
+            when=~F['trainer'] & ~F['client'],
         ),
         Format(
             text='Привет тренер',
@@ -54,7 +54,7 @@ validate_dialog = Dialog(
                 id='is_client',
                 on_click=is_client,
             ),
-            when=~F['trainer']&~F['client'],
+            when=~F['trainer'] & ~F['client'],
         ),
         Row(
             Button(
@@ -82,7 +82,7 @@ validate_dialog = Dialog(
         to_main_window,
         TextInput(
             id='tr_valid',
-            type_factory=valid_code,
+            type_factory=is_valid_trainer,
             on_success=successful_code,
             on_error=error_code,
         ),

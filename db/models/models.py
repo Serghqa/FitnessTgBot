@@ -16,20 +16,17 @@ class Trainer(Base):
     name: Mapped[str] = mapped_column(String)
     group: Mapped[list['Client']] = relationship(back_populates='clients')
 
-
     def __repr__(self):
 
         return f'trainer_id={self.trainer_id}, name={self.name}'
-    
 
     def get_data(self) -> dict[str, Any]:
-        
+
         return {
             'trainer': True,
             'id': self.trainer_id,
             'name': self.name
         }
-    
 
     def get_group(self) -> list[dict[str, Any]]:
 
@@ -46,11 +43,9 @@ class Client(Base):
     trainer_id: Mapped[BigInteger] = mapped_column(BigInteger, ForeignKey('trainer.trainer_id'))
     clients: Mapped['Trainer'] = relationship(back_populates='group')
 
-
     def __repr__(self):
 
         return f'client_id={self.client_id}, name={self.name}'
-    
 
     def get_data(self):
 

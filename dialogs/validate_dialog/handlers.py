@@ -4,14 +4,13 @@ from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import DialogManager, StartMode, ShowMode
 from aiogram_dialog.widgets.input import ManagedTextInput
 from aiogram_dialog.widgets.kbd import Button
-from sqlalchemy.orm import Session
 from typing import Callable
 from functools import wraps
 from string import ascii_lowercase, digits
 #  from config import load_config, Config
 from states import start_states, trainer_states, client_states
-from db import Trainer, Client, add_trainer_db, add_client_db, get_data_user
-from tmp_db import data_base
+from db import Trainer, add_user, get_data_user
+from test import test_data_all_none, test_trainer_true
 
 
 logger = logging.getLogger(__name__)
@@ -36,13 +35,10 @@ async def to_trainer_dialog(
     dialog_manager: DialogManager
 ):
 
-    session: Session = dialog_manager.middleware_data.get('session')
-    trainer_id = dialog_manager.event.from_user.id
-
-    user_data = get_data_user(session, trainer_id, Trainer)
+    test_trainer_true(dialog_manager.start_data)  # test the trainer must be True
 
     await dialog_manager.start(
-        data=user_data,
+        data=dialog_manager.start_data,
         state=trainer_states.TrainerState.main,
         mode=StartMode.RESET_STACK
     )
@@ -83,7 +79,7 @@ async def to_main_start_window(
     )
 
 
-def get_valid_variable(type_factory: Callable):
+def trainer_validate(type_factory: Callable):
     #  config: Config = load_config()
 
     @wraps(type_factory)
@@ -96,15 +92,15 @@ def get_valid_variable(type_factory: Callable):
     return wrapper
 
 
-@get_valid_variable
-def valid_code(code: str) -> str:
+@trainer_validate
+def is_valid_trainer(code: str) -> str:
 
     return code
 
 
 def is_valid_client(code: str) -> str:
 
-    if code in data_base['trainers']:
+    if code.isdigit():
         return code
 
     raise ValueError
@@ -117,17 +113,14 @@ async def successful_code(
         text: str
 ):
 
-    trainer_id = message.from_user.id
-    name = message.from_user.full_name
-    session: Session = dialog_manager.middleware_data.get('session')
-    
-    add_trainer_db(session, trainer_id, name)
-    ids = [123456780, 123654789, 456789123, 159753654, 456369852, 456369855]
-    names = ['sedhh', 'hgvghd', 'hjgtd', 'ghfgcxfdxf', 'ghcfgxdf', 'fvccszsd']
-    for i in range(len(ids)):
-        add_client_db(session, ids[i], names[i], trainer_id)
+    test_data_all_none(dialog_manager.dialog_data)  # test the values ​​of all attributes must be None
 
-    user_data = get_data_user(session, trainer_id, Trainer)
+    add_user(dialog_manager)
+    add_user(dialog_manager, dialog_manager.event.from_user.id)  # для отладки
+    user_data = get_data_user(dialog_manager, Trainer)
+
+    test_trainer_true(user_data)  # test the trainer must be True
+    #  add_user(dialog_manager, dialog_manager.event.from_user.id)  # для отладки
 
     await dialog_manager.start(
         data=user_data,
@@ -153,10 +146,9 @@ async def successful_client_code(
     text: str
 ):
 
-    trainer_id = text
-    client_id = str(message.from_user.id)
-    data_base['trainers'][trainer_id].update({client_id: {}})
-    data_base['clients'][client_id] = trainer_id
+    trainer_id = int(text)
+    add_user(dialog_manager, trainer_id)
+
     await dialog_manager.start(
         state=client_states.ClientState.main,
         mode=StartMode.RESET_STACK
