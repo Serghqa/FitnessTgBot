@@ -1,6 +1,5 @@
 import logging
 
-from pprint import pprint
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import CommandStart
@@ -8,9 +7,8 @@ from aiogram_dialog import (
     DialogManager,
     StartMode
 )
-from sqlalchemy.orm import Session
 from states import StartSG
-from db import Client, Trainer, get_data_user, get_user
+from db import Client, Trainer, get_data_user
 
 
 logger = logging.getLogger(__name__)
@@ -24,12 +22,9 @@ async def command_start(
         dialog_manager: DialogManager
 ):
 
-    session: Session = dialog_manager.middleware_data.get('session')
-    user_id = dialog_manager.event.from_user.id
-
-    user_data = get_data_user(session, user_id, Client)
+    user_data = get_data_user(dialog_manager, Client)
     if not user_data['client']:
-        user_data = get_data_user(session, user_id, Trainer)
+        user_data = get_data_user(dialog_manager, Trainer)
 
     await dialog_manager.start(
         data=user_data,

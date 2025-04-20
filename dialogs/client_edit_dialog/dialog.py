@@ -1,8 +1,18 @@
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import Button, Row, Back
+from aiogram_dialog.widgets.input import TextInput
 from states import ClientEditState
-from .handlers import done, workout_edit, workout_add, workout_apply, workout_sub
+from .handlers import (
+    done,
+    workout_edit,
+    workout_add,
+    workout_apply,
+    workout_sub,
+    is_valid_type,
+    successful_code,
+    error_code
+)
 from .getters import get_data
 
 
@@ -47,6 +57,12 @@ client_edit_dialog = Dialog(
                 on_click=workout_add,
             ),
             id='workout_row',
+        ),
+        TextInput(
+            id='edit_input',
+            type_factory=is_valid_type,
+            on_success=successful_code,
+            on_error=error_code,
         ),
         Row(
             Back(
