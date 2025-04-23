@@ -12,7 +12,9 @@ from .handlers import (
     to_message_window,
     send_message,
     process_selection,
-    set_radio_default,
+    next_page,
+    back_page,
+    get_client
 )
 from .getters import get_data, get_data_group, message_data
 
@@ -63,7 +65,6 @@ trainer_dialog = Dialog(
         MessageInput(
             func=send_message,
             content_types=ContentType.ANY,
-            filter=lambda x: True,
         ),
         to_main_window,
         getter=message_data,
@@ -77,11 +78,11 @@ trainer_dialog = Dialog(
         Group(
             Group(
                 Select(
-                  text=Format('{item[0]}'),
-                  id='client_select',
-                  item_id_getter=itemgetter(1),
-                  items='group',
-                  on_click=on_client,
+                    text=Format('{item[0]}'),
+                    id='client_select',
+                    item_id_getter=itemgetter(1),
+                    items='group',
+                    on_click=on_client,
                 ),
                 id='client_group',
                 width=1,
@@ -89,18 +90,23 @@ trainer_dialog = Dialog(
             Row(
                 Button(
                     text=Const('Назад'),
-                    id='group_prev',
+                    id='page_back',
+                    on_click=back_page,
                 ),
                 Button(
                     text=Const('Вперед'),
-                    id='group_next',
+                    id='page_next',
+                    on_click=next_page,
                 ),
                 id='scroll_group',
             ),
+        ),
+        MessageInput(
+            func=get_client,
+            content_types=ContentType.ANY,
         ),
         to_main_window,
         getter=get_data_group,
         state=TrainerState.group,
     ),
-    on_start=set_radio_default,
 )

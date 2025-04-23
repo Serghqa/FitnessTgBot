@@ -9,11 +9,11 @@ def add_user(
     dialog_manager: DialogManager,
     trainer_id=None
 ) -> None:
-
+    
     session: Session = dialog_manager.middleware_data.get('session')
 
     user_id = dialog_manager.event.from_user.id
-    name = dialog_manager.event.from_user.full_name
+    name = dialog_manager.event.from_user.full_name or 'no_name'
 
     if trainer_id is None:
         user: Trainer = set_trainer(user_id, name)
@@ -25,7 +25,7 @@ def add_user(
         for i in range(len(ids)):  # удалить
             user: Client = set_client(ids[i], names[i], trainer_id)  # удалить
             session.add(user)  # удалить
-            session.commit()  # удалить
+        session.commit()  # удалить
         return  # удалить
         #  user: Client = set_client(user_id, name, trainer_id) разкомментировать
 
@@ -33,10 +33,11 @@ def add_user(
     session.commit()
 
 
-def update_workouts_client(dialog_manager: DialogManager) -> None:
+def update_workouts(dialog_manager: DialogManager) -> None:
 
     client_id = dialog_manager.start_data['id']
     value = dialog_manager.start_data['workout'] + dialog_manager.start_data['workouts']
+
     if value < 0:
         value = 0
 
@@ -45,7 +46,7 @@ def update_workouts_client(dialog_manager: DialogManager) -> None:
     dialog_manager.start_data['workouts'] = value
     dialog_manager.start_data['workout'] = 0
 
-    stmt = select(Client).where(client_id == Client.client_id)
+    stmt = select(Client).where(client_id == Client.id)
     res = session.execute(stmt)
     client = res.scalar()
     client.workouts = value
@@ -58,7 +59,7 @@ def get_user(
     user_id: int,
     user: Client | Trainer
 ) -> Trainer | Client:
-
+    
     user = session.get(user, user_id)
 
     return user
@@ -66,32 +67,39 @@ def get_user(
 
 def get_data_user(
     dialog_manager: DialogManager,
-    model: Client | Trainer = Client,
-    group=False
+    model: Client | Trainer,
+    user_id: int | None = None
 ) -> dict[str, Any]:
-
+    
     session: Session = dialog_manager.middleware_data.get('session')
-    user_id = dialog_manager.event.from_user.id
+    user_id = user_id or dialog_manager.event.from_user.id
 
     data = {
         'client': None,
         'trainer': None,
         'id': None,
         'name': None,
-        'group': None,
         'workouts': None,
-        'trainer_id': None
+        'trainer_id': None,
+        'radio_default': '1'
     }
 
-    if issubclass(model, Client):
-        user = get_user(session, user_id, model)
-
-    if issubclass(model, Trainer):
-        user = get_user(session, user_id, model)
+    user = get_user(session, user_id, model)
 
     if user:
         data.update(user.get_data())
-        if group:
-            data['group'] = user.get_group()
 
     return data
+
+
+def get_group(dialog_manager: DialogManager) -> list[dict]:
+
+    offset = dialog_manager.dialog_data.get('offset')
+    limit = dialog_manager.dialog_data.get('limit')
+    
+    session: Session = dialog_manager.middleware_data.get('session')
+
+    smtm = select(Client).order_by(Client.id).offset(offset).limit(limit)
+    group = [row.Client.get_data() for row in session.execute(smtm).all()]
+    
+    return group

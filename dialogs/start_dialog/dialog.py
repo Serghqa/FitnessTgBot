@@ -21,13 +21,12 @@ async def command_start(
         message: Message,
         dialog_manager: DialogManager
 ):
-
-    user_data = get_data_user(dialog_manager, Client)
-    if not user_data['client']:
-        user_data = get_data_user(dialog_manager, Trainer)
+    data = get_data_user(dialog_manager, Client)
+    if not data.get('client'):
+        data = get_data_user(dialog_manager, Trainer)
 
     await dialog_manager.start(
-        data=user_data,
+        data=data,
         state=StartSG.start,
         mode=StartMode.RESET_STACK
     )

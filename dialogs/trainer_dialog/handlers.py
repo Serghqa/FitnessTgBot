@@ -6,11 +6,58 @@ from aiogram_dialog import DialogManager, ShowMode
 from aiogram_dialog.widgets.kbd import Button, Select, ManagedRadio
 from aiogram_dialog.widgets.input import MessageInput
 from states import TrainerState, ClientEditState
-from db import Trainer, get_data_user
-from test import test_trainer_true, test_group_true, test_not_data
+from db import Client, get_group, get_data_user
 
 
 logger = logging.getLogger(__name__)
+
+
+async def get_client(
+        message: Message,
+        widget: MessageInput,
+        dialog_manager: DialogManager
+):
+
+    if not message.text:
+        await message.answer('Ввели не корректные данные')
+
+    elif message.text.isdigit():
+        data = get_data_user(dialog_manager, Client, int(message.text))
+        
+        if data['client']:
+            for user in dialog_manager.dialog_data['group']:
+                if data['id'] == user['id']:
+                    user['workout'] = 0
+        
+                    await dialog_manager.start(
+                        state=ClientEditState.main,
+                        data=user,
+                        show_mode=ShowMode.SEND
+                    )
+
+                    break
+        
+        else:
+            await message.answer('Нет такого клиента')
+
+    else:
+        await message.answer('Введите id клиента')
+
+
+def set_frame_group(dialog_manager: DialogManager, limit: int):
+
+    dialog_manager.dialog_data['offset'] += limit
+
+    if dialog_manager.dialog_data['offset'] < 0:
+        dialog_manager.dialog_data['offset'] = 0
+
+    group: list[dict] = get_group(dialog_manager)
+
+    if not group:
+        dialog_manager.dialog_data['offset'] = 0
+        group: list[dict] = get_group(dialog_manager)
+
+    dialog_manager.dialog_data['group'] = group
 
 
 async def to_group_window(
@@ -18,22 +65,32 @@ async def to_group_window(
     widget: Button,
     dialog_manager: DialogManager
 ):
-
-    test_trainer_true(dialog_manager.start_data)  # test the trainer must be True
-    test_not_data(dialog_manager.dialog_data)  # test dialog_data must be empty
-
-    FRAME = {'start': 0, 'step': 3}
-    user_data = get_data_user(dialog_manager, Trainer, True)
-    user_data['frame'] = FRAME
-
-    dialog_manager.dialog_data.update(user_data)
-
-    test_group_true(dialog_manager.dialog_data)  # test group is list[dict]
-
+    
+    dialog_manager.dialog_data.update({'offset': 0, 'limit': 4})
+    set_frame_group(dialog_manager, 0)
+    
     await dialog_manager.switch_to(
         state=TrainerState.group,
         show_mode=ShowMode.EDIT
     )
+
+
+async def next_page(
+    callback: CallbackQuery,
+    widget: Button,
+    dialog_manager: DialogManager
+):
+    
+    set_frame_group(dialog_manager, dialog_manager.dialog_data['limit'])
+
+
+async def back_page(
+    callback: CallbackQuery,
+    widget: Button,
+    dialog_manager: DialogManager
+):
+    
+    set_frame_group(dialog_manager, dialog_manager.dialog_data['limit'])
 
 
 async def to_main_trainer_window(
@@ -41,10 +98,8 @@ async def to_main_trainer_window(
     widget: Button,
     dialog_manager: DialogManager
 ):
-
+    
     dialog_manager.dialog_data.clear()
-
-    test_not_data(dialog_manager.dialog_data)  # test dialog_data is empty
 
     await dialog_manager.switch_to(
         state=TrainerState.main,
@@ -58,13 +113,13 @@ async def on_client(
         dialog_manager: DialogManager,
         item_id: str
 ):
-
-    client_data: dict[str, Any] = dialog_manager.dialog_data['group'][int(item_id)]
-    client_data['workout'] = 0
+    
+    data: dict[str, Any] = dialog_manager.dialog_data['group'][int(item_id)]
+    data['workout'] = 0
 
     await dialog_manager.start(
         state=ClientEditState.main,
-        data=client_data,
+        data=data,
         show_mode=ShowMode.EDIT
     )
 
@@ -75,9 +130,11 @@ async def to_message_window(
         dialog_manager: DialogManager
 ):
 
-    test_not_data(dialog_manager.dialog_data)  # test dialog_data is empty
+    default = dialog_manager.start_data['radio_default']
+    dialog_manager.dialog_data['send_all'] = default
 
-    dialog_manager.dialog_data['send_all'] = True
+    radio: ManagedRadio = dialog_manager.find('send_checked')
+    await radio.set_checked(default)
 
     await dialog_manager.switch_to(
         state=TrainerState.message,
@@ -90,10 +147,10 @@ async def send_message(
         widget: MessageInput,
         dialog_manager: DialogManager
 ):
-
+    
     send_all = dialog_manager.dialog_data.get('send_all')
 
-    group = get_data_user(dialog_manager, Trainer, True).get('group')
+    group = get_group(dialog_manager)
     for client in group:
         if client['workouts'] or send_all:
             print(client)
@@ -105,14 +162,6 @@ async def process_selection(
         dialog_manager: DialogManager,
         item_id: str
 ):
-
-    dialog_manager.dialog_data['send_all'] = item_id == '1'
-
-
-async def set_radio_default(
-    _,
-    dialog_manager: DialogManager
-):
-
-    radio: ManagedRadio = dialog_manager.find('send_checked')
-    await radio.set_checked('1')
+    
+    default = dialog_manager.start_data['radio_default']
+    dialog_manager.dialog_data['send_all'] = (item_id == default)

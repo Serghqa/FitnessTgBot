@@ -5,7 +5,7 @@ from aiogram_dialog import DialogManager, ShowMode
 from aiogram_dialog.widgets.kbd import Button
 from aiogram_dialog.widgets.input import ManagedTextInput
 from sqlalchemy.orm import Session
-from db import update_workouts_client
+from db import update_workouts
 from states import ClientEditState
 
 
@@ -60,7 +60,7 @@ async def workout_apply(
     dialog_manager: DialogManager
 ):
 
-    update_workouts_client(dialog_manager)
+    update_workouts(dialog_manager)
 
 
 def is_valid_type(code: str):
