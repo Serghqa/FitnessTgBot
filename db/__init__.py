@@ -1,6 +1,7 @@
-from .models import Base, Client, Trainer
+from .models import Base, Client, Trainer, Schedule
 from .requests import (
-    add_user,
+    add_client,
+    add_trainer,
     get_data_user,
     update_workouts,
     get_user,
@@ -12,7 +13,9 @@ __all__ = [
     Base,
     Client,
     Trainer,
-    add_user,
+    Schedule,
+    add_client,
+    add_trainer,
     get_data_user,
     update_workouts,
     get_user,

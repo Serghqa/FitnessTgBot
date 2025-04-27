@@ -3,6 +3,7 @@ from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Format, Const
 from aiogram_dialog.widgets.kbd import Button, Row
 from aiogram_dialog.widgets.input import TextInput
+
 from states import StartSG
 from .handlers import (
     is_trainer,
@@ -46,12 +47,12 @@ validate_dialog = Dialog(
         Row(
             Button(
                 text=Const('Тренер'),
-                id='is_trainer',
+                id='is_tr',
                 on_click=is_trainer,
             ),
             Button(
                 text=Const('Клиент'),
-                id='is_client',
+                id='is_cl',
                 on_click=is_client,
             ),
             when=~F['trainer'] & ~F['client'],

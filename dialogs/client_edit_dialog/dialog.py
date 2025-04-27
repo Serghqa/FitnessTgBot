@@ -2,6 +2,7 @@ from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import Button, Row, Back
 from aiogram_dialog.widgets.input import TextInput
+
 from states import ClientEditState
 from .handlers import (
     done,
@@ -18,7 +19,7 @@ from .getters import get_data
 
 to_back_dialog_group = Button(
     text=Const('В группу'),
-    id='to_back_dialog_group',
+    id='to_dlg_gr',
     on_click=done,
 )
 
@@ -30,7 +31,7 @@ client_edit_dialog = Dialog(
         ),
         Button(
             text=Const('Тренировки'),
-            id='edit_workout',
+            id='ed_workout',
             on_click=workout_edit,
         ),
         to_back_dialog_group,
@@ -56,10 +57,10 @@ client_edit_dialog = Dialog(
                 id='sub',
                 on_click=workout_add,
             ),
-            id='workout_row',
+            id='row',
         ),
         TextInput(
-            id='edit_input',
+            id='ed_input',
             type_factory=is_valid_type,
             on_success=successful_code,
             on_error=error_code,

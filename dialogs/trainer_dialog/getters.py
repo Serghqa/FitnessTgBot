@@ -1,15 +1,13 @@
 import logging
 
-from aiogram.types import Update
 from aiogram_dialog import DialogManager
-from db import get_group
 
 
 logger = logging.getLogger(__name__)
 
 
 async def get_data(dialog_manager: DialogManager, **kwargs):
-    
+
     return dialog_manager.start_data
 
 

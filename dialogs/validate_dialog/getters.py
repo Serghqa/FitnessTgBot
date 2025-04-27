@@ -1,7 +1,6 @@
 import logging
 
 from aiogram_dialog import DialogManager
-from test import test_trainer_true
 
 logger = logging.getLogger(__name__)
 

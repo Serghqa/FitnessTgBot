@@ -1,9 +1,11 @@
 from operator import itemgetter
+
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Format, Const
 from aiogram_dialog.widgets.kbd import Button, Select, Group, Row, Radio
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram.enums import ContentType
+
 from states import TrainerState
 from .handlers import (
     to_group_window,
@@ -14,7 +16,8 @@ from .handlers import (
     process_selection,
     next_page,
     back_page,
-    get_client
+    get_client,
+    to_schedule
 )
 from .getters import get_data, get_data_group, message_data
 
@@ -34,13 +37,18 @@ trainer_dialog = Dialog(
         ),
         Button(
             text=Const('Моя группа'),
-            id='my_group',
+            id='my_gr',
             on_click=to_group_window,
         ),
         Button(
             text=Const('Сделать объявление'),
-            id='send_message',
+            id='send_mes',
             on_click=to_message_window,
+        ),
+        Button(
+            text=Const('Рассписание'),
+            id='to_sched',
+            on_click=to_schedule,
         ),
         getter=get_data,
         state=TrainerState.main,
@@ -57,7 +65,7 @@ trainer_dialog = Dialog(
             Format(
                 text='⚪️ {item[0]}'
             ),
-            id='send_checked',
+            id='radio',
             item_id_getter=itemgetter(1),
             items='radio',
             on_click=process_selection,
@@ -79,26 +87,26 @@ trainer_dialog = Dialog(
             Group(
                 Select(
                     text=Format('{item[0]}'),
-                    id='client_select',
+                    id='cl_sel',
                     item_id_getter=itemgetter(1),
                     items='group',
                     on_click=on_client,
                 ),
-                id='client_group',
+                id='cl_gr',
                 width=1,
             ),
             Row(
                 Button(
                     text=Const('Назад'),
-                    id='page_back',
+                    id='back',
                     on_click=back_page,
                 ),
                 Button(
                     text=Const('Вперед'),
-                    id='page_next',
+                    id='next',
                     on_click=next_page,
                 ),
-                id='scroll_group',
+                id='scr_gr',
             ),
         ),
         MessageInput(
