@@ -16,6 +16,7 @@ class Trainer(Base):
     name: Mapped[str] = mapped_column(String)
 
     trainings = relationship('Schedule', back_populates='trainer')
+    daily_schedules: Mapped[list['DailySchedule']] = relationship('DailySchedule', back_populates='trainer')
 
     def __repr__(self):
         return f'id={self.id}, name={self.name}'
@@ -35,7 +36,7 @@ class Client(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String)
     workouts: Mapped[int] = mapped_column(Integer, default=0)
-    trainer_id: Mapped[BigInteger] = mapped_column(BigInteger)
+    trainer_id: Mapped[int] = mapped_column(BigInteger)
 
     trainings = relationship('Schedule', back_populates='client')
 
@@ -43,7 +44,7 @@ class Client(Base):
 
         return f'id={self.id}, name={self.name}'
 
-    def get_data(self):
+    def get_data(self) -> dict[str, Any]:
 
         return {
             'client': True,
@@ -68,3 +69,30 @@ class Schedule(Base):
     def __repr__(self):
 
         return f'Training trainer_id={self.trainer_id}, client_id={self.client_id}'
+    
+
+class DailySchedule(Base):
+
+    __tablename__ = 'daily_schedule'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    start_work: Mapped[int] = mapped_column(Integer)
+    working_hours: Mapped[int] = mapped_column(Integer)
+    lunch_breaks: Mapped[str] = mapped_column(String)
+
+    trainer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('trainer.id'))
+    trainer = relationship('Trainer', back_populates='daily_schedules')
+
+    def __repr__(self):
+        
+        return f'Start of the workingvday: {self.start_work}, \
+            end of the working day: {self.start_work + self.working_hours}'
+    
+    def get_data(self):
+
+        return {
+            'start_work': self.start_work,
+            'working_hours': self.working_hours,
+            'launch_breaks': [lunch for lunch in self.lunch_breaks.split(', ')]
+        }
+

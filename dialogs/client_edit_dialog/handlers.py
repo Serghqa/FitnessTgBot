@@ -12,27 +12,6 @@ from states import ClientEditState
 logger = logging.getLogger(__name__)
 
 
-async def done(
-    callback: CallbackQuery,
-    widget: Button,
-    dialog_manager: DialogManager
-):
-
-    await dialog_manager.done(show_mode=ShowMode.EDIT)
-
-
-async def workout_edit(
-    callback: CallbackQuery,
-    widget: Button,
-    dialog_manager: DialogManager
-):
-
-    await dialog_manager.switch_to(
-        state=ClientEditState.workout_edit,
-        show_mode=ShowMode.EDIT
-    )
-
-
 async def workout_add(
     callback: CallbackQuery,
     widget: Button,

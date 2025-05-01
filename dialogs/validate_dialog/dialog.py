@@ -1,105 +1,99 @@
 from aiogram import F
+
 from aiogram_dialog import Dialog, Window
-from aiogram_dialog.widgets.text import Format, Const
-from aiogram_dialog.widgets.kbd import Button, Row
+from aiogram_dialog.widgets.text import Const
+from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo, Start
 from aiogram_dialog.widgets.input import TextInput
 
 from states import StartSG
 from .handlers import (
-    is_trainer,
     to_trainer_dialog,
-    is_client,
     to_client_dialog,
-    to_main_start_window,
-    is_valid_trainer,
-    is_valid_client,
-    successful_code,
+    is_trainer,
+    is_client,
+    trainer_is_valid,
     error_code,
-    successful_client_code
+    client_is_valid
 )
 from .getters import get_data
 
 
-to_main_window = Button(
+MAIN_MENU = SwitchTo(
     text=Const('Отмена'),
     id='to_main',
-    on_click=to_main_start_window,
+    state=StartSG.main,
 )
 
 
 validate_dialog = Dialog(
     Window(
-        Format(
-            text='Главное стартовое окно',
+        Const(
+            text='Главное окно валидации',
         ),
-        Format(
+        Const(
             text='Привет, выбери статус:',
             when=~F['trainer'] & ~F['client'],
         ),
-        Format(
+        Const(
             text='Привет тренер',
             when='trainer',
         ),
-        Format(
+        Const(
             text='Привет клиент',
             when='client',
         ),
         Row(
-            Button(
+            SwitchTo(
                 text=Const('Тренер'),
-                id='is_tr',
-                on_click=is_trainer,
+                id='tr',
+                state=StartSG.trainer,
             ),
-            Button(
+            SwitchTo(
                 text=Const('Клиент'),
-                id='is_cl',
-                on_click=is_client,
+                id='cl',
+                state=StartSG.client,
             ),
             when=~F['trainer'] & ~F['client'],
         ),
-        Row(
-            Button(
-                text=Const('В тренерскую'),
-                id='to_tr_dlg',
-                on_click=to_trainer_dialog,
-                when='trainer',
-            ),
+        Button(
+            text=Const('В тренерскую'),
+            id='to_tr_dlg',
+            on_click=to_trainer_dialog,
+            when='trainer',
         ),
-        Row(
-            Button(
-                text=Const('В группу'),
-                id='to_cl_dlg',
-                on_click=to_client_dialog,
-                when='client',
-            ),
+        Button(
+            text=Const('В группу'),
+            id='to_cl_dlg',
+            on_click=to_client_dialog,
+            when='client',
         ),
         getter=get_data,
-        state=StartSG.start,
+        state=StartSG.main,
     ),
     Window(
-        Format(
+        Const(
             text='Подтвердите, ваш статус тренера, введите код:',
         ),
-        to_main_window,
+        MAIN_MENU,
         TextInput(
             id='tr_valid',
-            type_factory=is_valid_trainer,
-            on_success=successful_code,
+            type_factory=is_trainer,
+            on_success=trainer_is_valid,
             on_error=error_code,
         ),
-        state=StartSG.trainer_validate,
+        state=StartSG.trainer,
     ),
     Window(
-        Format(
+        Const(
             text='Введите номер вашей группы:'
         ),
-        to_main_window,
+        MAIN_MENU,
         TextInput(
             id='gr_valid',
-            type_factory=is_valid_client,
-            on_success=successful_client_code,
+            type_factory=is_client,
+            on_success=client_is_valid,
             on_error=error_code,
         ),
-        state=StartSG.client_validate,
+        state=StartSG.client,
     ),
 )

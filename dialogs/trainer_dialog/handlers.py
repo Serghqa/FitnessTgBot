@@ -95,7 +95,7 @@ async def back_page(
     _set_frame_group(dialog_manager, dialog_manager.dialog_data['limit'])
 
 
-async def to_main_trainer_window(
+async def to_main_window(
     callback: CallbackQuery,
     widget: Button,
     dialog_manager: DialogManager
@@ -126,12 +126,13 @@ async def on_client(
     )
 
 
-async def to_schedule(
+async def to_schedule_dlg(
     callback: CallbackQuery,
     widget: Button,
     dialog_manager: DialogManager
 ):
 
+    
     await dialog_manager.start(
         state=TrainerScheduleStates.main,
         show_mode=ShowMode.EDIT
@@ -147,7 +148,7 @@ async def to_message_window(
     default = dialog_manager.start_data['radio_default']
     dialog_manager.dialog_data['send_all'] = default
 
-    radio: ManagedRadio = dialog_manager.find('radio')
+    radio: ManagedRadio = dialog_manager.find('radio_mess')
     await radio.set_checked(default)
 
     await dialog_manager.switch_to(

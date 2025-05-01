@@ -2,48 +2,118 @@ import logging
 
 from datetime import date
 
-from aiogram.types import CallbackQuery
-from aiogram_dialog import DialogManager, ShowMode, ChatEvent
-from aiogram_dialog.widgets.kbd import Button, ManagedCalendar
+from aiogram import F
 
-from states import TrainerScheduleStates
+from aiogram_dialog import ChatEvent, DialogManager
+from aiogram_dialog.widgets.text import Format, Text
+from aiogram_dialog.widgets.kbd import (
+    Calendar,
+    CalendarScope,
+    ManagedCalendar
+)
+from aiogram_dialog.widgets.kbd.calendar_kbd import (
+    DATE_TEXT,
+    TODAY_TEXT,
+    CalendarDaysView,
+    CalendarMonthView,
+    CalendarScopeView,
+    CalendarYearsView,
+)
+
+from babel.dates import get_day_names, get_month_names
 
 
 logger = logging.getLogger(__name__)
 
 
-async def done(
-    callback: CallbackQuery,
-    widget: Button,
-    dialog_manager: DialogManager
-):
-
-    await dialog_manager.done(show_mode=ShowMode.EDIT)
+SELECTED_DAYS_KEY = 'selected_dates'
 
 
-async def to_main_schedule_window(
-    callback: CallbackQuery,
-    widget: Button,
-    dialog_manager: DialogManager
-):
+class WeekDay(Text):
 
-    await dialog_manager.switch_to(state=TrainerScheduleStates.main)
+    async def _render_text(self, data, manager: DialogManager) -> str:
 
+        selected_date: date = data['date']
+        locale = manager.event.from_user.language_code
 
-async def to_create_schedule(
-    callback: CallbackQuery,
-    widget: Button,
-    dialog_manager: DialogManager
-):
-
-    await dialog_manager.switch_to(state=TrainerScheduleStates.create_schedule)
+        return get_day_names(
+            width='short', context='stand-alone', locale=locale,
+        )[selected_date.weekday()].title()
 
 
-async def on_date_clicked(
+class MarkedDay(Text):
+
+    def __init__(self, mark: str, other: Text):
+
+        super().__init__()
+        self.mark = mark
+        self.other = other
+
+    async def _render_text(self, data, manager: DialogManager) -> str:
+
+        current_date: date = data['date']
+        serial_date = current_date.isoformat()
+        selected = manager.dialog_data.get(SELECTED_DAYS_KEY, [])
+
+        if serial_date in selected:
+            return self.mark
+        
+        return await self.other.render_text(data, manager)
+
+
+class Month(Text):
+
+    async def _render_text(self, data, manager: DialogManager) -> str:
+
+        selected_date: date = data['date']
+        locale = manager.event.from_user.language_code
+
+        return get_month_names(
+            'wide', context='stand-alone', locale=locale,
+        )[selected_date.month].title()
+
+
+class CustomCalendar(Calendar):
+
+    def _init_views(self) -> dict[CalendarScope, CalendarScopeView]:
+
+        return {
+            CalendarScope.DAYS: CalendarDaysView(
+                self._item_callback_data,
+                date_text=MarkedDay("🔴", DATE_TEXT),
+                today_text=MarkedDay("⭕", TODAY_TEXT),
+                header_text='~~~~~ ' + Month() + ' ~~~~~',
+                weekday_text=WeekDay(),
+                next_month_text=Month() + ' >>',
+                prev_month_text='<< ' + Month(),
+            ),
+            CalendarScope.MONTHS: CalendarMonthView(
+                self._item_callback_data,
+                month_text=Month(),
+                header_text='~~~~~ ' + Format('{date:%Y}') + ' ~~~~~',
+                this_month_text='[' + Month() + ']',
+            ),
+            CalendarScope.YEARS: CalendarYearsView(
+                self._item_callback_data,
+            ),
+        }
+
+
+async def on_date_selected(
     callback: ChatEvent,
     widget: ManagedCalendar,
-    manager: DialogManager,
-    selected_date: date, /,
+    dialog_manager: DialogManager,
+    clicked_date: date, /,
 ):
+    
+    today = date.today().isoformat()
+    
+    selected = dialog_manager.dialog_data.setdefault(SELECTED_DAYS_KEY, [])
+    serial_date = clicked_date.isoformat()
 
-    await callback.answer(str(selected_date))
+    if serial_date in selected:
+        selected.remove(serial_date)
+
+    else:
+        if today < serial_date:
+            selected.append(serial_date)

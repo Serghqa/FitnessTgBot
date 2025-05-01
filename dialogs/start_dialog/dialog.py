@@ -20,14 +20,15 @@ start_router = Router()
 @start_router.message(F.text, CommandStart())
 async def command_start(
         message: Message,
-        dialog_manager: DialogManager
+        dialog_manager: DialogManager,
 ):
+    
     data = get_data_user(dialog_manager, Client)
     if not data.get('client'):
         data = get_data_user(dialog_manager, Trainer)
 
     await dialog_manager.start(
         data=data,
-        state=StartSG.start,
+        state=StartSG.main,
         mode=StartMode.RESET_STACK
     )

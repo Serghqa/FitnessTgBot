@@ -1,7 +1,8 @@
 import logging
 
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import DialogManager, StartMode, ShowMode
+
+from aiogram_dialog import DialogManager, StartMode
 from aiogram_dialog.widgets.input import ManagedTextInput
 from aiogram_dialog.widgets.kbd import Button
 
@@ -18,18 +19,6 @@ logger = logging.getLogger(__name__)
 simbols = ascii_lowercase + digits
 
 
-async def is_trainer(
-        callback: CallbackQuery,
-        widget: Button,
-        dialog_manager: DialogManager
-):
-
-    await dialog_manager.switch_to(
-        state=start_states.StartSG.trainer_validate,
-        show_mode=ShowMode.EDIT
-    )
-
-
 async def to_trainer_dialog(
     callback: CallbackQuery,
     widget: Button,
@@ -43,18 +32,6 @@ async def to_trainer_dialog(
     )
 
 
-async def is_client(
-        callback: CallbackQuery,
-        widget: Button,
-        dialog_manager: DialogManager
-):
-
-    await dialog_manager.switch_to(
-        state=start_states.StartSG.client_validate,
-        show_mode=ShowMode.EDIT
-    )
-
-
 async def to_client_dialog(
     callback: CallbackQuery,
     widget: Button,
@@ -64,17 +41,6 @@ async def to_client_dialog(
     await dialog_manager.start(
         state=client_states.ClientState.main,
         mode=StartMode.RESET_STACK
-    )
-
-
-async def to_main_start_window(
-        callback: CallbackQuery,
-        widget: Button,
-        dialog_manager: DialogManager
-):
-
-    await dialog_manager.switch_to(
-        state=start_states.StartSG.start,
     )
 
 
@@ -94,12 +60,12 @@ def trainer_validate(type_factory: Callable):
 
 
 @trainer_validate
-def is_valid_trainer(code: str) -> str:
+def is_trainer(code: str) -> str:
 
     return code
 
 
-def is_valid_client(code: str) -> str:
+def is_client(code: str) -> str:
 
     if code.isdigit():
         return code
@@ -107,7 +73,7 @@ def is_valid_client(code: str) -> str:
     raise ValueError
 
 
-async def successful_code(
+async def trainer_is_valid(
         message: Message,
         widget: ManagedTextInput,
         dialog_manager: DialogManager,
@@ -132,10 +98,10 @@ async def error_code(
         error: ValueError
 ):
 
-    await message.answer(text='Error code')
+    await message.answer(text='Неверный код')
 
 
-async def successful_client_code(
+async def client_is_valid(
     message: Message,
     widget: ManagedTextInput,
     dialog_manager: DialogManager,

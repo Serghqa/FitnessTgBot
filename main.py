@@ -4,6 +4,9 @@ import logging.config
 import dialogs
 
 from aiogram import Bot, Dispatcher, Router
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+
 from aiogram_dialog import setup_dialogs
 
 from sqlalchemy import create_engine
@@ -28,9 +31,11 @@ async def main():
 
     Session = sessionmaker(engine, expire_on_commit=False)
 
-    bot = Bot(token=config.tg_bot.TOKEN)
+    bot = Bot(token=config.tg_bot.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
+
     dp.update.middleware(DbSessionMiddleware(Session))
+    
     dp.include_routers(dialogs.setup_all_dialogs(Router))
     setup_dialogs(dp)
 
