@@ -1,8 +1,4 @@
-from datetime import date
-
-from aiogram import F
-
-from aiogram_dialog import ChatEvent, Dialog, Window, ShowMode
+from aiogram_dialog import Dialog, Window, ShowMode
 from aiogram_dialog.widgets.text import Const
 from aiogram_dialog.widgets.kbd import SwitchTo, Cancel, Row, Button
 

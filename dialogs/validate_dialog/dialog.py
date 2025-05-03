@@ -2,7 +2,7 @@ from aiogram import F
 
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const
-from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo, Start
+from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo
 from aiogram_dialog.widgets.input import TextInput
 
 from states import StartSG

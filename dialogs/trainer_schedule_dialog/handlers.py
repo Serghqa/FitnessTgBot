@@ -2,8 +2,6 @@ import logging
 
 from datetime import date
 
-from aiogram import F
-
 from aiogram_dialog import ChatEvent, DialogManager
 from aiogram_dialog.widgets.text import Format, Text
 from aiogram_dialog.widgets.kbd import (
@@ -57,7 +55,7 @@ class MarkedDay(Text):
 
         if serial_date in selected:
             return self.mark
-        
+
         return await self.other.render_text(data, manager)
 
 
@@ -105,9 +103,9 @@ async def on_date_selected(
     dialog_manager: DialogManager,
     clicked_date: date, /,
 ):
-    
+
     today = date.today().isoformat()
-    
+
     selected = dialog_manager.dialog_data.setdefault(SELECTED_DAYS_KEY, [])
     serial_date = clicked_date.isoformat()
 

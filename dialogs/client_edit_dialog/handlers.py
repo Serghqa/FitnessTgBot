@@ -1,12 +1,11 @@
 import logging
 
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import DialogManager, ShowMode
+from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.kbd import Button
 from aiogram_dialog.widgets.input import ManagedTextInput
 
 from db import update_workouts
-from states import ClientEditState
 
 
 logger = logging.getLogger(__name__)
@@ -39,7 +38,7 @@ async def workout_apply(
     dialog_manager: DialogManager
 ):
 
-    update_workouts(dialog_manager)
+    await update_workouts(dialog_manager)
 
 
 def is_valid_type(code: str):

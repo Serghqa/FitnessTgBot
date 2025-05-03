@@ -11,7 +11,7 @@ from functools import wraps
 from string import ascii_lowercase, digits
 #  from config import load_config, Config
 
-from states import start_states, trainer_states, client_states
+from states import trainer_states, client_states
 from db import Trainer, add_client, add_trainer, get_data_user
 
 
@@ -80,9 +80,11 @@ async def trainer_is_valid(
         text: str
 ):
 
-    add_trainer(dialog_manager)
-    add_client(dialog_manager, dialog_manager.event.from_user.id)  # для отладки
-    data = get_data_user(dialog_manager, Trainer)
+    await add_trainer(dialog_manager)
+
+    # add_client для отладки
+    await add_client(dialog_manager, dialog_manager.event.from_user.id)
+    data = await get_data_user(dialog_manager, Trainer)
 
     await dialog_manager.start(
         data=data,
@@ -109,7 +111,7 @@ async def client_is_valid(
 ):
 
     trainer_id = int(text)
-    add_client(dialog_manager, trainer_id)
+    await add_client(dialog_manager, trainer_id)
 
     await dialog_manager.start(
         state=client_states.ClientState.main,

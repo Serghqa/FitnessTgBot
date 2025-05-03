@@ -9,13 +9,23 @@ from aiogram.enums import ParseMode
 
 from aiogram_dialog import setup_dialogs
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    async_sessionmaker,
+    AsyncEngine
+)
 
 from logging_setting import logging_config
 from config import load_config, Config
 from middleware import DbSessionMiddleware
 from db import Base
+
+
+async def create_tables(engine: AsyncEngine):
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
 
 
 async def main():
@@ -24,14 +34,18 @@ async def main():
 
     config: Config = load_config()
 
-    engine = create_engine(url='sqlite:///Fitness.db', echo=False)
+    engine: AsyncEngine = create_async_engine(
+        url='sqlite+aiosqlite:///./Fitness.db', echo=False
+    )
 
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
+    await create_tables(engine=engine)
 
-    Session = sessionmaker(engine, expire_on_commit=False)
+    Session = async_sessionmaker(engine, expire_on_commit=False)
 
-    bot = Bot(token=config.tg_bot.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot(
+        token=config.tg_bot.TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
     dp = Dispatcher()
 
     dp.update.middleware(DbSessionMiddleware(Session))

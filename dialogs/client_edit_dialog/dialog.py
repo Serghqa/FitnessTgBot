@@ -1,6 +1,6 @@
 from aiogram_dialog import Dialog, Window, ShowMode
 from aiogram_dialog.widgets.text import Const, Format
-from aiogram_dialog.widgets.kbd import Button, Row, Back, Cancel, SwitchTo
+from aiogram_dialog.widgets.kbd import Button, Row, Cancel, SwitchTo
 from aiogram_dialog.widgets.input import TextInput
 
 from states import ClientEditState

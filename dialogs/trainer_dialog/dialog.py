@@ -2,7 +2,7 @@ from operator import itemgetter
 
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Format, Const
-from aiogram_dialog.widgets.kbd import Button, Select, Group, Row, Radio, SwitchTo
+from aiogram_dialog.widgets.kbd import Button, Select, Group, Row, Radio
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram.enums import ContentType
 

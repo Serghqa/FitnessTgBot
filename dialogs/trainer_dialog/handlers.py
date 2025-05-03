@@ -24,7 +24,7 @@ async def get_client(
         await message.answer('Ввели не корректные данные')
 
     elif message.text.isdigit():
-        data = get_data_user(dialog_manager, Client, int(message.text))
+        data = await get_data_user(dialog_manager, Client, int(message.text))
 
         if data['client']:
             for user in dialog_manager.dialog_data['group']:
@@ -46,18 +46,18 @@ async def get_client(
         await message.answer('id должен состоять только из цифр')
 
 
-def _set_frame_group(dialog_manager: DialogManager, limit: int) -> None:
+async def _set_frame_group(dialog_manager: DialogManager, limit: int) -> None:
 
     dialog_manager.dialog_data['offset'] += limit
 
     if dialog_manager.dialog_data['offset'] < 0:
         dialog_manager.dialog_data['offset'] = 0
 
-    group: list[dict] = get_group(dialog_manager)
+    group: list[dict] = await get_group(dialog_manager)
 
     if not group:
         dialog_manager.dialog_data['offset'] = 0
-        group: list[dict] = get_group(dialog_manager)
+        group: list[dict] = await get_group(dialog_manager)
 
     dialog_manager.dialog_data['group'] = group
 
@@ -68,8 +68,13 @@ async def to_group_window(
     dialog_manager: DialogManager
 ):
 
-    dialog_manager.dialog_data.update({'offset': 0, 'limit': 5})
-    _set_frame_group(dialog_manager, 0)
+    dialog_manager.dialog_data.update(
+        {
+            'offset': 0,
+            'limit': 5
+        }
+    )
+    await _set_frame_group(dialog_manager, 0)
 
     await dialog_manager.switch_to(
         state=TrainerState.group,
@@ -83,7 +88,10 @@ async def next_page(
     dialog_manager: DialogManager
 ):
 
-    _set_frame_group(dialog_manager, dialog_manager.dialog_data['limit'])
+    await _set_frame_group(
+        dialog_manager,
+        dialog_manager.dialog_data['limit']
+    )
 
 
 async def back_page(
@@ -92,7 +100,10 @@ async def back_page(
     dialog_manager: DialogManager
 ):
 
-    _set_frame_group(dialog_manager, -(dialog_manager.dialog_data['limit']))
+    await _set_frame_group(
+        dialog_manager,
+        -(dialog_manager.dialog_data['limit'])
+    )
 
 
 async def to_main_window(
@@ -164,7 +175,7 @@ async def send_message(
 
     send_all = dialog_manager.dialog_data.get('send_all')
 
-    group = get_group(dialog_manager)
+    group = await get_group(dialog_manager)
     for client in group:
         if client['workouts'] or send_all:
             print(client)
