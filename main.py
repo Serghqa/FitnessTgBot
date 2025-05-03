@@ -24,7 +24,7 @@ async def main():
 
     config: Config = load_config()
 
-    engine = create_engine(url='sqlite:///Fitnes.db', echo=False)
+    engine = create_engine(url='sqlite:///Fitness.db', echo=False)
 
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
@@ -35,7 +35,7 @@ async def main():
     dp = Dispatcher()
 
     dp.update.middleware(DbSessionMiddleware(Session))
-    
+
     dp.include_routers(dialogs.setup_all_dialogs(Router))
     setup_dialogs(dp)
 
