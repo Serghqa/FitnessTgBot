@@ -68,7 +68,7 @@ async def to_group_window(
     dialog_manager: DialogManager
 ):
 
-    dialog_manager.dialog_data.update({'offset': 0, 'limit': 4})
+    dialog_manager.dialog_data.update({'offset': 0, 'limit': 5})
     _set_frame_group(dialog_manager, 0)
 
     await dialog_manager.switch_to(
@@ -92,7 +92,7 @@ async def back_page(
     dialog_manager: DialogManager
 ):
 
-    _set_frame_group(dialog_manager, dialog_manager.dialog_data['limit'])
+    _set_frame_group(dialog_manager, -(dialog_manager.dialog_data['limit']))
 
 
 async def to_main_window(
@@ -132,7 +132,6 @@ async def to_schedule_dlg(
     dialog_manager: DialogManager
 ):
 
-    
     await dialog_manager.start(
         state=TrainerScheduleStates.main,
         show_mode=ShowMode.EDIT

@@ -1,6 +1,10 @@
 from aiogram_dialog import DialogManager
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+
+from faker import Faker
+
 from db.models import set_trainer, set_client, set_daily_schedule, Trainer, Client, DailySchedule
 from typing import Any
 
@@ -36,10 +40,10 @@ def add_client(dialog_manager: DialogManager, trainer_id: int):
 
     session: Session = dialog_manager.middleware_data.get('session')
 
-    ids = [123456780, 123654789, 456789123, 159753654, 456369852, 456369855]  # удалить
-    names = ['Сергей Петрович', 'Наталья Андреевна', 'Михаил Викторович', 'Алексей Леонидович', 'Екатерина Сергеевна', 'Илья Иванович']  # удалить
-    for i in range(len(ids)):  # удалить
-        user: Client = set_client(ids[i], names[i], trainer_id)  # удалить
+    fake = Faker(locale='ru_RU')
+
+    for i in range(100_000_000, 100_001_000):  # удалить
+        user: Client = set_client(i, fake.name(), trainer_id)  # удалить
         session.add(user)  # удалить
 
     session.commit()  # удалить
@@ -134,5 +138,3 @@ def get_daily_schedules(dialog_manager: DialogManager) -> list[dict]:
     session: Session = dialog_manager.middleware_data.get('session')
 
     user: Trainer = get_user(session, id, Trainer)
-    
-

@@ -12,7 +12,7 @@ class Trainer(Base):
 
     __tablename__ = 'trainer'
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String)
 
     trainings = relationship('Schedule', back_populates='trainer')
@@ -33,7 +33,7 @@ class Client(Base):
 
     __tablename__ = 'client'
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String)
     workouts: Mapped[int] = mapped_column(Integer, default=0)
     trainer_id: Mapped[int] = mapped_column(BigInteger)
@@ -69,7 +69,7 @@ class Schedule(Base):
     def __repr__(self):
 
         return f'Training trainer_id={self.trainer_id}, client_id={self.client_id}'
-    
+
 
 class DailySchedule(Base):
 
@@ -84,10 +84,10 @@ class DailySchedule(Base):
     trainer = relationship('Trainer', back_populates='daily_schedules')
 
     def __repr__(self):
-        
+
         return f'Start of the workingvday: {self.start_work}, \
             end of the working day: {self.start_work + self.working_hours}'
-    
+
     def get_data(self):
 
         return {
@@ -95,4 +95,3 @@ class DailySchedule(Base):
             'working_hours': self.working_hours,
             'launch_breaks': [lunch for lunch in self.lunch_breaks.split(', ')]
         }
-
