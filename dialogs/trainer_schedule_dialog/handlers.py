@@ -1,13 +1,15 @@
 import logging
 
-from datetime import date
+from aiogram.types import CallbackQuery
 
-from aiogram_dialog import ChatEvent, DialogManager
+from aiogram_dialog import ChatEvent, DialogManager, ShowMode
 from aiogram_dialog.widgets.text import Format, Text
 from aiogram_dialog.widgets.kbd import (
+    Button,
     Calendar,
     CalendarScope,
-    ManagedCalendar
+    ManagedCalendar,
+    ManagedMultiselect
 )
 from aiogram_dialog.widgets.kbd.calendar_kbd import (
     DATE_TEXT,
@@ -19,6 +21,10 @@ from aiogram_dialog.widgets.kbd.calendar_kbd import (
 )
 
 from babel.dates import get_day_names, get_month_names
+from datetime import date
+
+from db import DailySchedule, get_daily_schedules
+from states import TrainerScheduleStates
 
 
 logger = logging.getLogger(__name__)
@@ -115,3 +121,38 @@ async def on_date_selected(
     else:
         if today < serial_date:
             selected.append(serial_date)
+
+
+async def on_work(
+    callback: CallbackQuery,
+    widget: Button,
+    dialog_manager: DialogManager
+):
+
+    work = {
+        'widget_id': widget.widget_id,
+        'start': None,
+        'stop': None,
+
+    }
+
+    daily_schedules: list[DailySchedule] = \
+        await get_daily_schedules(dialog_manager)
+    print(daily_schedules)
+
+    dialog_manager.dialog_data.update(work)
+
+    await dialog_manager.switch_to(
+        state=TrainerScheduleStates.start_work,
+        show_mode=ShowMode.EDIT,
+    )
+
+
+async def on_hour_selected(
+    callback: CallbackQuery,
+    widget: ManagedMultiselect,
+    dialog_manager: DialogManager,
+    item_id: str
+):
+
+    pass

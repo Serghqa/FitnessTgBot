@@ -35,9 +35,12 @@ async def add_trainer(dialog_manager: DialogManager) -> None:
     name = dialog_manager.event.from_user.id or 'no_name'
 
     user: Trainer = set_trainer(id=id, name=name)
-    daily_schedule_1: DailySchedule = set_daily_schedule(user, 1, 9, 9, '1')
-    daily_schedule_2: DailySchedule = set_daily_schedule(user, 2, 8, 12, '2')
-    daily_schedule_3: DailySchedule = set_daily_schedule(user, 3, 10, 12, '2')
+    daily_schedule_1: DailySchedule = \
+        set_daily_schedule(user, 1, 9, 9, '12')
+    daily_schedule_2: DailySchedule = \
+        set_daily_schedule(user, 2, 8, 12, '12, 16')
+    daily_schedule_3: DailySchedule = \
+        set_daily_schedule(user, 3, 10, 12, '13, 17')
 
     session.add_all(
         [user, daily_schedule_1, daily_schedule_2, daily_schedule_3]
@@ -61,8 +64,8 @@ async def add_client(dialog_manager: DialogManager, trainer_id: int) -> None:
 async def update_workouts(dialog_manager: DialogManager) -> None:
 
     client_id = dialog_manager.start_data['id']
-    value = dialog_manager.start_data['workout'] \
-        + dialog_manager.start_data['workouts']
+    value = dialog_manager.start_data['workout'] + \
+        dialog_manager.start_data['workouts']
 
     if value < 0:
         value = 0
@@ -125,12 +128,15 @@ async def get_group(dialog_manager: DialogManager) -> list[dict]:
     return group
 
 
-async def get_daily_schedules(dialog_manager: DialogManager) -> list[dict]:
+async def get_daily_schedules(
+    dialog_manager: DialogManager
+) -> list[DailySchedule]:
 
     id = dialog_manager.event.from_user.id
 
     session: AsyncSession = dialog_manager.middleware_data.get('session')
 
-    user: Trainer = get_user(session, id, Trainer)
+    user: Trainer = await get_user(session, id, Trainer)
+    daily_schedules: list[DailySchedule] = user.daily_schedules
 
-    return user
+    return daily_schedules

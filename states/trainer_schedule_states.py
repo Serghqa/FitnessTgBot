@@ -5,4 +5,4 @@ class TrainerScheduleStates(StatesGroup):
     main = State()
     schedule = State()
     work = State()
-
+    start_work = State()

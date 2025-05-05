@@ -55,7 +55,7 @@ async def _set_frame_group(dialog_manager: DialogManager, limit: int) -> None:
 
     group: list[dict] = await get_group(dialog_manager)
 
-    if not group:
+    if not group and dialog_manager.dialog_data['offset'] > 0:
         dialog_manager.dialog_data['offset'] = 0
         group: list[dict] = await get_group(dialog_manager)
 

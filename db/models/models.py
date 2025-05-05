@@ -17,7 +17,8 @@ class Trainer(Base):
     name: Mapped[str] = mapped_column(String)
 
     trainings = relationship('Schedule', back_populates='trainer')
-    daily_schedules: Mapped[list['DailySchedule']] = relationship('DailySchedule', back_populates='trainer')
+    daily_schedules: Mapped[list['DailySchedule']] = \
+        relationship('DailySchedule', back_populates='trainer', lazy='joined')
 
     def __repr__(self):
         return f'id={self.id}, name={self.name}'
@@ -60,16 +61,20 @@ class Schedule(Base):
 
     __tablename__ = 'schedule'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    client_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('client.id'))
-    trainer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('trainer.id'))
+    id: Mapped[int] = \
+        mapped_column(Integer, primary_key=True, autoincrement=True)
+    client_id: Mapped[int] = \
+        mapped_column(BigInteger, ForeignKey('client.id'))
+    trainer_id: Mapped[int] = \
+        mapped_column(BigInteger, ForeignKey('trainer.id'))
 
     client = relationship('Client', back_populates='trainings')
     trainer = relationship('Trainer', back_populates='trainings')
 
     def __repr__(self):
 
-        return f'Training trainer_id={self.trainer_id}, client_id={self.client_id}'
+        return f'Training trainer_id={self.trainer_id}, '\
+            f'client_id={self.client_id}'
 
 
 class DailySchedule(Base):
@@ -81,18 +86,25 @@ class DailySchedule(Base):
     working_hours: Mapped[int] = mapped_column(Integer)
     lunch_breaks: Mapped[str] = mapped_column(String)
 
-    trainer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('trainer.id'))
-    trainer = relationship('Trainer', back_populates='daily_schedules')
+    trainer_id: Mapped[int] =\
+        mapped_column(BigInteger, ForeignKey('trainer.id'))
+    trainer = relationship(
+        'Trainer',
+        back_populates='daily_schedules',
+        lazy='selectin'
+    )
 
     def __repr__(self):
 
-        return f'Start of the workingvday: {self.start_work}, \
-            end of the working day: {self.start_work + self.working_hours}'
+        return f'Start of the workingvday: {self.start_work}, '\
+            f'end of the working day: {self.start_work + self.working_hours}'
 
     def get_data(self):
 
         return {
             'start_work': self.start_work,
             'working_hours': self.working_hours,
-            'launch_breaks': [lunch for lunch in self.lunch_breaks.split(', ')]
+            'launch_breaks': [
+                int(lunch) for lunch in self.lunch_breaks.split(', ')
+            ]
         }
