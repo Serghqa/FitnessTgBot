@@ -81,9 +81,7 @@ async def trainer_is_valid(
 ):
 
     await add_trainer(dialog_manager)
-
-    # add_client для отладки
-    await add_client(dialog_manager, dialog_manager.event.from_user.id)
+    await add_client(dialog_manager, dialog_manager.event.from_user.id)  # для отладки
     data = await get_data_user(dialog_manager, Trainer)
 
     await dialog_manager.start(

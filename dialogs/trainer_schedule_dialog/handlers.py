@@ -1,15 +1,21 @@
 import logging
 
+from typing import Any, Callable, TypeVar
+
 from aiogram.types import CallbackQuery
 
+from aiogram_dialog.api.internal import RawKeyboard
 from aiogram_dialog import ChatEvent, DialogManager, ShowMode
 from aiogram_dialog.widgets.text import Format, Text
 from aiogram_dialog.widgets.kbd import (
     Button,
     Calendar,
+    SwitchTo,
     CalendarScope,
+    Multiselect,
     ManagedCalendar,
-    ManagedMultiselect
+    ManagedMultiselect,
+    ManagedRadio
 )
 from aiogram_dialog.widgets.kbd.calendar_kbd import (
     DATE_TEXT,
@@ -23,12 +29,16 @@ from aiogram_dialog.widgets.kbd.calendar_kbd import (
 from babel.dates import get_day_names, get_month_names
 from datetime import date
 
-from db import DailySchedule, get_daily_schedules
+from db import update_daily_schedule
+
 from states import TrainerScheduleStates
 
 
 logger = logging.getLogger(__name__)
 
+
+T = TypeVar("T")
+TypeFactory = Callable[[str], T]
 
 SELECTED_DAYS_KEY = 'selected_dates'
 
@@ -103,6 +113,55 @@ class CustomCalendar(Calendar):
         }
 
 
+class CustomMultiselect(Multiselect):
+
+    def __init__(
+        self,
+        checked_text,
+        unchecked_text,
+        id,
+        item_id_getter,
+        items,
+        min_selected = 0,
+        max_selected = 0,
+        type_factory: TypeFactory[T] = str,
+        on_click = None,
+        on_state_changed = None,
+        when = None
+    ):
+        
+        super().__init__(
+            checked_text,
+            unchecked_text,
+            id,
+            item_id_getter,
+            items,
+            min_selected,
+            max_selected,
+            type_factory,
+            on_click,
+            on_state_changed,
+            when
+        )
+
+    async def _render_keyboard(
+        self,
+        data: dict,
+        manager: DialogManager,
+    ) -> RawKeyboard:
+        
+        keyboard = []
+        row = []
+
+        for pos, item in enumerate(self.items_getter(data)):
+            row.append(await self._render_button(pos, item, item, data, manager))
+            if len(row) == 6:
+                keyboard.append(row)
+                row = []
+        
+        return keyboard
+
+
 async def on_date_selected(
     callback: ChatEvent,
     widget: ManagedCalendar,
@@ -121,38 +180,93 @@ async def on_date_selected(
     else:
         if today < serial_date:
             selected.append(serial_date)
+    
+    radio: ManagedRadio = dialog_manager.find('radio_work')
+    item_id = radio.get_checked()
+
+    print(serial_date, item_id)
+    
 
 
-async def on_work(
+async def set_radio_default(
+    callback: CallbackQuery,
+    widget: SwitchTo,
+    dialog_manager: DialogManager
+):
+
+    radio: ManagedRadio = dialog_manager.find('radio_work')
+
+    default = dialog_manager.start_data['work_default']
+    await radio.set_checked(default)
+
+
+def _get_sotred_items(work: str) -> list[int]:
+
+    return sorted(map(int, work.split(', ')))
+
+
+async def set_checked(
+    callback: CallbackQuery,
+    widget: SwitchTo,
+    dialog_manager: DialogManager
+):
+    
+    work_id = dialog_manager.start_data['work_default']
+
+    await _set_checked(dialog_manager, int(work_id))
+
+
+async def _set_checked(dialog_manager: DialogManager, work_id: int):  
+    
+    data: dict[str, Any] = dialog_manager.start_data['schedules'][work_id]
+    multiselect: CustomMultiselect = dialog_manager.find('sel')
+
+    for item in _get_sotred_items(data['work']):
+        await multiselect.set_checked(item, True)
+
+
+async def process_selection(
+    callback: CallbackQuery,
+    widget: ManagedRadio,
+    dialog_manager: DialogManager,
+    item_id: str
+):
+    
+    dialog_manager.start_data['work_default'] = item_id
+    items: list[int] = _get_sotred_items(dialog_manager.start_data['schedules'][int(item_id)]['work'])
+    breaks = ', '.join([str(i) for i in range(items[0], items[-1]) if i not in items]) or 'нет'
+
+    message = f'Работа с {items[0]} до {items[-1]}\n'\
+        f'Перерыв: {breaks}'
+    
+    await callback.answer(message)
+
+
+async def reset_checked(
+    callback: CallbackQuery,
+    widget: SwitchTo,
+    dialog_manager: DialogManager 
+):
+    
+    multiselect: ManagedMultiselect = dialog_manager.find('sel')
+
+    await multiselect.reset_checked()
+
+
+async def apply_work(
     callback: CallbackQuery,
     widget: Button,
     dialog_manager: DialogManager
 ):
 
-    work = {
-        'widget_id': widget.widget_id,
-        'start': None,
-        'stop': None,
+    id = dialog_manager.start_data['work_default']
+    multiselect: ManagedMultiselect = dialog_manager.find('sel')
 
-    }
+    data: dict[str, Any] = dialog_manager.start_data['schedules'][int(id)]
+    items: list[int] = sorted(map(int, multiselect.get_checked()))
 
-    daily_schedules: list[DailySchedule] = \
-        await get_daily_schedules(dialog_manager)
-    print(daily_schedules)
+    data['work'] = ', '.join(map(str, items))
 
-    dialog_manager.dialog_data.update(work)
+    await update_daily_schedule(dialog_manager, int(id), data['work'])
 
-    await dialog_manager.switch_to(
-        state=TrainerScheduleStates.start_work,
-        show_mode=ShowMode.EDIT,
-    )
-
-
-async def on_hour_selected(
-    callback: CallbackQuery,
-    widget: ManagedMultiselect,
-    dialog_manager: DialogManager,
-    item_id: str
-):
-
-    pass
+    await dialog_manager.switch_to(state=TrainerScheduleStates.work)

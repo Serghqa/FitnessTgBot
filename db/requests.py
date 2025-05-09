@@ -36,11 +36,11 @@ async def add_trainer(dialog_manager: DialogManager) -> None:
 
     user: Trainer = set_trainer(id=id, name=name)
     daily_schedule_1: DailySchedule = \
-        set_daily_schedule(user, 1, 9, 9, '12')
+        set_daily_schedule(user, 1, ', '.join(map(str, range(9, 18))))
     daily_schedule_2: DailySchedule = \
-        set_daily_schedule(user, 2, 8, 12, '12, 16')
+        set_daily_schedule(user, 2, ', '.join(map(str, range(10, 20))))
     daily_schedule_3: DailySchedule = \
-        set_daily_schedule(user, 3, 10, 12, '13, 17')
+        set_daily_schedule(user, 3, ', '.join(map(str, range(10, 22))))
 
     session.add_all(
         [user, daily_schedule_1, daily_schedule_2, daily_schedule_3]
@@ -140,3 +140,14 @@ async def get_daily_schedules(
     daily_schedules: list[DailySchedule] = user.daily_schedules
 
     return daily_schedules
+
+
+async def update_daily_schedule(dialog_manager: DialogManager, id: int, value: str):
+
+    session: AsyncSession = dialog_manager.middleware_data.get('session')
+
+    schedule: DailySchedule = await session.get(DailySchedule, id)
+
+    schedule.work = value
+
+    await session.commit()

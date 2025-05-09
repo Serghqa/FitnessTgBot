@@ -82,9 +82,7 @@ class DailySchedule(Base):
     __tablename__ = 'daily_schedule'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    start_work: Mapped[int] = mapped_column(Integer)
-    working_hours: Mapped[int] = mapped_column(Integer)
-    lunch_breaks: Mapped[str] = mapped_column(String)
+    work: Mapped[str] = mapped_column(String)
 
     trainer_id: Mapped[int] =\
         mapped_column(BigInteger, ForeignKey('trainer.id'))
@@ -96,15 +94,11 @@ class DailySchedule(Base):
 
     def __repr__(self):
 
-        return f'Start of the workingvday: {self.start_work}, '\
-            f'end of the working day: {self.start_work + self.working_hours}'
+        return f'Work hours: {self.work}'
 
     def get_data(self):
 
         return {
-            'start_work': self.start_work,
-            'working_hours': self.working_hours,
-            'launch_breaks': [
-                int(lunch) for lunch in self.lunch_breaks.split(', ')
-            ]
+            'id': self.id,
+            'work': self.work
         }

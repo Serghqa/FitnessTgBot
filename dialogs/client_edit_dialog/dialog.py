@@ -15,29 +15,31 @@ from .handlers import (
 from .getters import get_data
 
 
-CANCEL = Cancel(
-    text=Const('В группу'),
-    id='can_ed',
-    show_mode=ShowMode.EDIT,
-)
+NAME = 'name'
+WORKOUTS = 'workouts'
+WORKOUT = 'workout'
 
 
 client_edit_dialog = Dialog(
     Window(
         Format(
-            text='Окно клиента {name}\nТренировок {workouts}',
+            text='Окно клиента {NAME}\nТренировок {WORKOUTS}',
         ),
         SwitchTo(
             text=Const('Тренировки'),
             id='to_ed_wor',
             state=ClientEditState.workout_edit,
         ),
-        CANCEL,
+        Cancel(
+            text=Const('В группу'),
+            id='can_ed',
+            show_mode=ShowMode.EDIT,
+        ),
         state=ClientEditState.main,
     ),
     Window(
         Format(
-            text='Тренировок {workouts}\nИзменить на {workout}',
+            text='Тренировок {WORKOUTS}\nИзменить на {WORKOUT}',
         ),
         Row(
             Button(
@@ -63,14 +65,10 @@ client_edit_dialog = Dialog(
             on_success=successful_code,
             on_error=error_code,
         ),
-        Row(
-            SwitchTo(
-                text=Const('Назад'),
-                id='to_main',
-                state=ClientEditState.main,
-            ),
-            CANCEL,
-            id='row_can_ba',
+        SwitchTo(
+            text=Const('Назад'),
+            id='to_main',
+            state=ClientEditState.main,
         ),
         state=ClientEditState.workout_edit,
     ),

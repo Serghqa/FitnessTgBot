@@ -5,25 +5,37 @@ from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import (
     SwitchTo,
     Cancel,
-    Row,
     Button,
-    Multiselect
+    Radio,
+    Column,
+    Row
 )
 
 from states import TrainerScheduleStates
 from .handlers import (
     CustomCalendar,
+    CustomMultiselect,
     on_date_selected,
-    on_work,
-    on_hour_selected
+    set_radio_default,
+    apply_work,
+    reset_checked,
+    process_selection,
+    set_checked
 )
-from .getters import selection_getter, get_multiselect_data
+from .getters import selection_getter, get_multiselect_data, get_data_radio
 
 
-MAIN_MENU = SwitchTo(
-    text=Const('К расписанию'),
-    id='to_main',
-    state=TrainerScheduleStates.main,
+RADIO = Radio(
+    Format(
+        text='🔘 ✅ {item[0]}'
+    ),
+    Format(
+        text='⚪️ {item[0]}'
+    ),
+    id='radio_work',
+    item_id_getter=itemgetter(1),
+    items='radio',
+    on_click=process_selection,
 )
 
 
@@ -33,17 +45,19 @@ trainer_schedule_dialog = Dialog(
             text='Главное окно расписания'
         ),
         SwitchTo(
-            Const('Выбрать смену'),
-            id='to_chan',
+            Const('Редактор смены'),
+            id='to_work',
+            on_click=set_radio_default,
             state=TrainerScheduleStates.work,
         ),
         SwitchTo(
             Const('Создать расписание'),
             id='to_cal',
+            on_click=set_radio_default,
             state=TrainerScheduleStates.schedule
         ),
         Cancel(
-            text=Const('На главную'),
+            text=Const('Назад'),
             id='can_sched',
             show_mode=ShowMode.EDIT,
         ),
@@ -57,7 +71,12 @@ trainer_schedule_dialog = Dialog(
             id='cal',
             on_click=on_date_selected,
         ),
-        MAIN_MENU,
+        RADIO,
+        SwitchTo(
+            text=Const('Назад'),
+            id='cal_back',
+            state=TrainerScheduleStates.main,
+        ),
         getter=selection_getter,
         state=TrainerScheduleStates.schedule,
     ),
@@ -65,63 +84,52 @@ trainer_schedule_dialog = Dialog(
         Const(
             text='Рабочая смена',
         ),
+        Column(
+            RADIO,
+            id='col',
+        ),
         Row(
-            Button(
-                text=Const('Смена 1 '),
-                id='w1',
-                on_click=on_work,
+            SwitchTo(
+                text=Const('Назад'),
+                id='work_back',
+                state=TrainerScheduleStates.main,
             ),
-            Button(
-                text=Const('Смена 2 '),
-                id='w2',
-                on_click=on_work,
-            ),
-            Button(
-                text=Const('Смена 3 '),
-                id='w3',
-                on_click=on_work,
+            SwitchTo(
+                text=Const('Редактировать'),
+                id='ed_work',
+                on_click=set_checked,
+                state=TrainerScheduleStates.edit_work,
             ),
         ),
-        MAIN_MENU,
+        getter=get_data_radio,
         state=TrainerScheduleStates.work,
     ),
     Window(
         Const(
-            text='Создайте смену',
+            text='Редактор смены',
         ),
-        Multiselect(
-            Format('✅ {item[0]}'),
+        CustomMultiselect(
+            Format('{item[2]} {item[0]}'),
             Format('{item[0]}'),
-            id='m1',
+            id='sel',
             item_id_getter=itemgetter(1),
-            items='rows1',
-            on_click=on_hour_selected,
+            items='rows',
+            min_selected=1,
         ),
-        Multiselect(
-            Format('✅ {item[0]}'),
-            Format('{item[0]}'),
-            id='m2',
-            item_id_getter=itemgetter(1),
-            items='rows2',
-            on_click=on_hour_selected,
-        ),
-        Multiselect(
-            Format('✅ {item[0]}'),
-            Format('{item[0]}'),
-            id='m3',
-            item_id_getter=itemgetter(1),
-            items='rows3',
-            on_click=on_hour_selected,
-        ),
-        Multiselect(
-            Format('✅ {item[0]}'),
-            Format('{item[0]}'),
-            id='m4',
-            item_id_getter=itemgetter(1),
-            items='rows4',
-            on_click=on_hour_selected,
+        Row(
+            SwitchTo(
+                text=Const('Назад'),
+                id='back_w',
+                on_click=reset_checked,
+                state=TrainerScheduleStates.work,
+            ),
+            Button(
+                text=Const('Применить'),
+                id='apply',
+                on_click=apply_work,
+            ),
         ),
         getter=get_multiselect_data,
-        state=TrainerScheduleStates.start_work,
+        state=TrainerScheduleStates.edit_work,
     ),
 )

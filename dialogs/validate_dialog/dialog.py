@@ -18,6 +18,10 @@ from .handlers import (
 from .getters import get_data
 
 
+CLIENT = 'client'
+TRAINER = 'trainer'
+
+
 MAIN_MENU = SwitchTo(
     text=Const('Отмена'),
     id='to_main',
@@ -32,15 +36,15 @@ validate_dialog = Dialog(
         ),
         Const(
             text='Привет, выбери статус:',
-            when=~F['trainer'] & ~F['client'],
+            when=~F[TRAINER] & ~F[CLIENT],
         ),
         Const(
             text='Привет тренер',
-            when='trainer',
+            when=TRAINER,
         ),
         Const(
             text='Привет клиент',
-            when='client',
+            when=CLIENT,
         ),
         Row(
             SwitchTo(
@@ -53,19 +57,19 @@ validate_dialog = Dialog(
                 id='cl',
                 state=StartSG.client,
             ),
-            when=~F['trainer'] & ~F['client'],
+            when=~F[TRAINER] & ~F[CLIENT],
         ),
         Button(
             text=Const('В тренерскую'),
             id='to_tr_dlg',
             on_click=to_trainer_dialog,
-            when='trainer',
+            when=TRAINER,
         ),
         Button(
             text=Const('В группу'),
             id='to_cl_dlg',
             on_click=to_client_dialog,
-            when='client',
+            when=CLIENT,
         ),
         getter=get_data,
         state=StartSG.main,

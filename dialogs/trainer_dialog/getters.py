@@ -6,6 +6,12 @@ from aiogram_dialog import DialogManager
 logger = logging.getLogger(__name__)
 
 
+NAME = 'name'
+WORKOUTS = 'workouts'
+GROUP = 'group'
+RADIO = 'radio'
+
+
 async def get_data(dialog_manager: DialogManager, **kwargs):
 
     return dialog_manager.start_data
@@ -15,15 +21,15 @@ async def get_data_group(dialog_manager: DialogManager, **kwargs):
 
     group = [
         (
-            f'🙋🏼‍♂️{client['name']} 🏋🏼‍♂️{client['workouts']}',
+            f'🙋🏼‍♂️{client[NAME]} 🏋🏼‍♂️{client[WORKOUTS]}',
             i
         )
-        for i, client in enumerate(dialog_manager.dialog_data.get('group'))
+        for i, client in enumerate(dialog_manager.dialog_data.get(GROUP))
     ]
 
-    return {'group': group}
+    return {GROUP: group}
 
 
 async def message_data(dialog_manager: DialogManager, **kwargs):
 
-    return {'radio': [('Всем', 1), ('Оплаченным', 2)]}
+    return {RADIO: [('Всем', 1), ('Оплаченным', 2)]}

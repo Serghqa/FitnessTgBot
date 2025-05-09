@@ -4,14 +4,28 @@ from typing import Any
 
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import DialogManager, ShowMode
-from aiogram_dialog.widgets.kbd import Button, Select, ManagedRadio
+from aiogram_dialog.widgets.kbd import Button, Select, ManagedRadio, SwitchTo
 from aiogram_dialog.widgets.input import MessageInput
 
 from states import TrainerState, TrainerScheduleStates, ClientEditState
-from db import Client, get_group, get_data_user
+from db import Client, DailySchedule, get_group, get_data_user, get_daily_schedules
 
 
 logger = logging.getLogger(__name__)
+
+
+GROUP = 'group'
+CLIENT = 'client'
+ID = 'id'
+WORKOUT = 'workout'
+WORKOUTS = 'workouts'
+OFFSET = 'offset'
+LIMIT = 'limit'
+RADIO_DEFAULT = 'radio_default'
+SEND_ALL = 'send_all'
+RADIO_MESS = 'radio_mess'
+WORK_DEFAULT = 'work_default'
+SCHEDULES = 'schedules'
 
 
 async def get_client(
@@ -26,10 +40,10 @@ async def get_client(
     elif message.text.isdigit():
         data = await get_data_user(dialog_manager, Client, int(message.text))
 
-        if data['client']:
-            for user in dialog_manager.dialog_data['group']:
-                if data['id'] == user['id']:
-                    user['workout'] = 0
+        if data[CLIENT]:
+            for user in dialog_manager.dialog_data[GROUP]:
+                if data[ID] == user[ID]:
+                    user[WORKOUT] = 0
 
                     await dialog_manager.start(
                         state=ClientEditState.main,
@@ -48,38 +62,33 @@ async def get_client(
 
 async def _set_frame_group(dialog_manager: DialogManager, limit: int) -> None:
 
-    dialog_manager.dialog_data['offset'] += limit
+    dialog_manager.dialog_data[OFFSET] += limit
 
-    if dialog_manager.dialog_data['offset'] < 0:
-        dialog_manager.dialog_data['offset'] = 0
+    if dialog_manager.dialog_data[OFFSET] < 0:
+        dialog_manager.dialog_data[OFFSET] = 0
 
     group: list[dict] = await get_group(dialog_manager)
 
-    if not group and dialog_manager.dialog_data['offset'] > 0:
-        dialog_manager.dialog_data['offset'] = 0
+    if not group and dialog_manager.dialog_data[OFFSET] > 0:
+        dialog_manager.dialog_data[OFFSET] = 0
         group: list[dict] = await get_group(dialog_manager)
 
-    dialog_manager.dialog_data['group'] = group
+    dialog_manager.dialog_data[GROUP] = group
 
 
-async def to_group_window(
+async def set_frame(
     callback: CallbackQuery,
-    widget: Button,
+    widget: SwitchTo,
     dialog_manager: DialogManager
 ):
 
     dialog_manager.dialog_data.update(
         {
-            'offset': 0,
-            'limit': 5
+            OFFSET: 0,
+            LIMIT: 5
         }
     )
     await _set_frame_group(dialog_manager, 0)
-
-    await dialog_manager.switch_to(
-        state=TrainerState.group,
-        show_mode=ShowMode.EDIT
-    )
 
 
 async def next_page(
@@ -90,7 +99,7 @@ async def next_page(
 
     await _set_frame_group(
         dialog_manager,
-        dialog_manager.dialog_data['limit']
+        dialog_manager.dialog_data[LIMIT]
     )
 
 
@@ -102,7 +111,7 @@ async def back_page(
 
     await _set_frame_group(
         dialog_manager,
-        -(dialog_manager.dialog_data['limit'])
+        -(dialog_manager.dialog_data[LIMIT])
     )
 
 
@@ -127,8 +136,8 @@ async def on_client(
         item_id: str
 ):
 
-    data: dict[str, Any] = dialog_manager.dialog_data['group'][int(item_id)]
-    data['workout'] = 0
+    data: dict[str, Any] = dialog_manager.dialog_data[GROUP][int(item_id)]
+    data[WORKOUT] = 0
 
     await dialog_manager.start(
         state=ClientEditState.main,
@@ -142,29 +151,36 @@ async def to_schedule_dlg(
     widget: Button,
     dialog_manager: DialogManager
 ):
+    
+    daily_schedules: list[DailySchedule] = \
+        await get_daily_schedules(dialog_manager)
+    
+    data = {}
+    schedules: dict[int, dict] = {schedule.id: schedule.get_data() for schedule in daily_schedules}
+    
+    default = dialog_manager.start_data[RADIO_DEFAULT]
+    
+    data[WORK_DEFAULT] = default
+    data[SCHEDULES] = schedules
 
     await dialog_manager.start(
+        data=data,
         state=TrainerScheduleStates.main,
         show_mode=ShowMode.EDIT
     )
 
 
-async def to_message_window(
+async def set_radio_default(
         callback: CallbackQuery,
-        widget: Button,
+        widget: SwitchTo,
         dialog_manager: DialogManager
 ):
 
-    default = dialog_manager.start_data['radio_default']
-    dialog_manager.dialog_data['send_all'] = default
+    default = dialog_manager.start_data[RADIO_DEFAULT]
+    dialog_manager.dialog_data[SEND_ALL] = default
 
-    radio: ManagedRadio = dialog_manager.find('radio_mess')
+    radio: ManagedRadio = dialog_manager.find(RADIO_MESS)
     await radio.set_checked(default)
-
-    await dialog_manager.switch_to(
-        state=TrainerState.message,
-        show_mode=ShowMode.EDIT
-    )
 
 
 async def send_message(
@@ -173,11 +189,11 @@ async def send_message(
         dialog_manager: DialogManager
 ):
 
-    send_all = dialog_manager.dialog_data.get('send_all')
+    send_all = dialog_manager.dialog_data.get(SEND_ALL)
 
     group = await get_group(dialog_manager)
     for client in group:
-        if client['workouts'] or send_all:
+        if client[WORKOUTS] or send_all:
             print(client)
 
 
@@ -188,5 +204,5 @@ async def process_selection(
         item_id: str
 ):
 
-    default = dialog_manager.start_data['radio_default']
-    dialog_manager.dialog_data['send_all'] = (item_id == default)
+    default = dialog_manager.start_data[RADIO_DEFAULT]
+    dialog_manager.dialog_data[SEND_ALL] = (item_id == default)

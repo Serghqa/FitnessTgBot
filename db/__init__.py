@@ -6,7 +6,8 @@ from .requests import (
     update_workouts,
     get_user,
     get_group,
-    get_daily_schedules
+    get_daily_schedules,
+    update_daily_schedule
 )
 
 
@@ -22,5 +23,6 @@ __all__ = [
     update_workouts,
     get_user,
     get_group,
-    get_daily_schedules
+    get_daily_schedules,
+    update_daily_schedule
 ]

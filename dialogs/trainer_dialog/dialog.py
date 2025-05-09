@@ -2,16 +2,16 @@ from operator import itemgetter
 
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Format, Const
-from aiogram_dialog.widgets.kbd import Button, Select, Group, Row, Radio
+from aiogram_dialog.widgets.kbd import Button, Select, Group, Row, Radio, SwitchTo, Start
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram.enums import ContentType
 
 from states import TrainerState
 from .handlers import (
-    to_group_window,
+    set_frame,
     to_main_window,
     on_client,
-    to_message_window,
+    set_radio_default,
     send_message,
     process_selection,
     next_page,
@@ -22,10 +22,11 @@ from .handlers import (
 from .getters import get_data, get_data_group, message_data
 
 
-MAIN_MENU = Button(
-    text=Const('На главную'),
+MAIN_MENU = SwitchTo(
+    text=Const('Назад'),
     id='to_main',
     on_click=to_main_window,
+    state=TrainerState.main,
 )
 
 
@@ -35,15 +36,17 @@ trainer_dialog = Dialog(
         Const(
             text='Главное окно тренера',
         ),
-        Button(
+        SwitchTo(
             text=Const('Моя группа'),
             id='my_gr',
-            on_click=to_group_window,
+            on_click=set_frame,
+            state=TrainerState.group,
         ),
-        Button(
+        SwitchTo(
             text=Const('Сделать объявление'),
             id='send_mess',
-            on_click=to_message_window,
+            on_click=set_radio_default,
+            state=TrainerState.message,
         ),
         Button(
             text=Const('Рассписание'),
@@ -60,7 +63,7 @@ trainer_dialog = Dialog(
         ),
         Radio(
             Format(
-                text='🔘 {item[0]}'
+                text='🔘 ✅ {item[0]}'
             ),
             Format(
                 text='⚪️ {item[0]}'

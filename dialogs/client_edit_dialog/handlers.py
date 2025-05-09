@@ -11,13 +11,17 @@ from db import update_workouts
 logger = logging.getLogger(__name__)
 
 
+WORKOUT = 'workout'
+WORKOUTS = 'workouts'
+
+
 async def workout_add(
     callback: CallbackQuery,
     widget: Button,
     dialog_manager: DialogManager
 ):
 
-    dialog_manager.start_data['workout'] += 1
+    dialog_manager.start_data[WORKOUT] += 1
 
 
 async def workout_sub(
@@ -26,10 +30,10 @@ async def workout_sub(
     dialog_manager: DialogManager
 ):
 
-    workouts = dialog_manager.start_data['workouts']
+    workouts = dialog_manager.start_data[WORKOUTS]
 
-    if workouts + (dialog_manager.start_data['workout'] - 1) > -1:
-        dialog_manager.start_data['workout'] -= 1
+    if workouts + (dialog_manager.start_data[WORKOUT] - 1) > -1:
+        dialog_manager.start_data[WORKOUT] -= 1
 
 
 async def workout_apply(
@@ -63,10 +67,10 @@ async def successful_code(
 ):
 
     if text.startswith('-'):
-        dialog_manager.start_data['workout'] -= int(text[1:])
+        dialog_manager.start_data[WORKOUT] -= int(text[1:])
 
     else:
-        dialog_manager.start_data['workout'] += int(text)
+        dialog_manager.start_data[WORKOUT] += int(text)
 
 
 async def error_code(
