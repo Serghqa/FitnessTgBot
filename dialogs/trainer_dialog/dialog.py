@@ -13,7 +13,6 @@ from .handlers import (
     on_client,
     set_radio_default,
     send_message,
-    process_selection,
     next_page,
     back_page,
     get_client,
@@ -71,7 +70,6 @@ trainer_dialog = Dialog(
             id='radio_mess',
             item_id_getter=itemgetter(1),
             items='radio',
-            on_click=process_selection,
         ),
         MessageInput(
             func=send_message,

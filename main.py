@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import (
 
 from logging_setting import logging_config
 from config import load_config, Config
-from middleware import DbSessionMiddleware
+from middleware import DbSessionMiddleware, LoggingMiddleware
 from db import Base
 
 
@@ -31,6 +31,9 @@ async def create_tables(engine: AsyncEngine):
 async def main():
 
     logging.config.dictConfig(logging_config)
+    logging.getLogger('aiogram.event').setLevel(logging.WARNING)
+
+    logger = logging.getLogger(__name__)
 
     config: Config = load_config()
 
@@ -43,18 +46,25 @@ async def main():
     Session = async_sessionmaker(engine, expire_on_commit=False)
 
     bot = Bot(
-        token=config.tg_bot.TOKEN,
+        #  token=config.tg_bot.TOKEN,
+        token='7631598893:AAEXvczkvLbJT5XDnPXtXoC5gCjSBnx9nlk',  # УБРАТЬ
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     dp = Dispatcher()
 
     dp.update.middleware(DbSessionMiddleware(Session))
 
-    dp.include_routers(dialogs.setup_all_dialogs(Router))
+    router: Router = dialogs.setup_all_dialogs(Router)
+    router.callback_query.middleware(LoggingMiddleware())
+    router.message.middleware(LoggingMiddleware())
+
+    dp.include_routers(router)
     setup_dialogs(dp)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
+
+    logger.info('start polling')
 
 if __name__ == '__main__':
     asyncio.run(main())

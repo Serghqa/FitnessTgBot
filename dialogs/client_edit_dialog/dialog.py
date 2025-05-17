@@ -15,15 +15,10 @@ from .handlers import (
 from .getters import get_data
 
 
-NAME = 'name'
-WORKOUTS = 'workouts'
-WORKOUT = 'workout'
-
-
 client_edit_dialog = Dialog(
     Window(
         Format(
-            text='Окно клиента {NAME}\nТренировок {WORKOUTS}',
+            text='Окно клиента {name}\nТренировок {workouts}',
         ),
         SwitchTo(
             text=Const('Тренировки'),
@@ -39,7 +34,7 @@ client_edit_dialog = Dialog(
     ),
     Window(
         Format(
-            text='Тренировок {WORKOUTS}\nИзменить на {WORKOUT}',
+            text='Тренировок {workouts}\nИзменить на {workout}',
         ),
         Row(
             Button(

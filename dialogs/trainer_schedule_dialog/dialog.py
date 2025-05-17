@@ -17,12 +17,14 @@ from .handlers import (
     CustomMultiselect,
     on_date_selected,
     set_radio_default,
-    apply_work,
     reset_checked,
     process_selection,
-    set_checked
+    apply_selected,
+    apply_work,
+    set_checked,
+    reset_calendar
 )
-from .getters import selection_getter, get_multiselect_data, get_data_radio
+from .getters import selection_getter, get_multiselect_data, get_data_radio, cancel_work_getter
 
 
 RADIO = Radio(
@@ -32,7 +34,7 @@ RADIO = Radio(
     Format(
         text='⚪️ {item[0]}'
     ),
-    id='radio_work',
+    id='rad',
     item_id_getter=itemgetter(1),
     items='radio',
     on_click=process_selection,
@@ -72,13 +74,36 @@ trainer_schedule_dialog = Dialog(
             on_click=on_date_selected,
         ),
         RADIO,
+        Row(
+            SwitchTo(
+                text=Const('Назад'),
+                id='cal_back',
+                on_click=reset_calendar,
+                state=TrainerScheduleStates.main,
+            ),
+            Button(
+                text=Const('Применить'),
+                id='apply_cal',
+                on_click=apply_selected,
+            ),
+        ),
         SwitchTo(
-            text=Const('Назад'),
-            id='cal_back',
-            state=TrainerScheduleStates.main,
+            text=Const('Отменить запись'),
+            id='to_can_cal',
+            state=TrainerScheduleStates.cancel_work,
         ),
         getter=selection_getter,
         state=TrainerScheduleStates.schedule,
+    ),
+    Window(
+        Const(
+            text='Отмена ранее созданных рабочих смен',
+        ),
+        CustomCalendar(
+            id='can_cal',
+        ),
+        getter=cancel_work_getter,
+        state=TrainerScheduleStates.cancel_work,
     ),
     Window(
         Const(

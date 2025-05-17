@@ -17,8 +17,11 @@ class Trainer(Base):
     name: Mapped[str] = mapped_column(String)
 
     trainings = relationship('Schedule', back_populates='trainer')
-    daily_schedules: Mapped[list['DailySchedule']] = \
-        relationship('DailySchedule', back_populates='trainer', lazy='joined')
+
+    working_days: Mapped[list['WorkingDay']] = \
+        relationship('WorkingDay', back_populates='trainer', lazy='joined')
+    schedules = \
+        relationship('TrainerSchedule', back_populates='trainer', lazy='joined')
 
     def __repr__(self):
         return f'id={self.id}, name={self.name}'
@@ -77,18 +80,18 @@ class Schedule(Base):
             f'client_id={self.client_id}'
 
 
-class DailySchedule(Base):
+class WorkingDay(Base):
 
-    __tablename__ = 'daily_schedule'
+    __tablename__ = 'working_day'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     work: Mapped[str] = mapped_column(String)
-
     trainer_id: Mapped[int] =\
         mapped_column(BigInteger, ForeignKey('trainer.id'))
+    
     trainer = relationship(
         'Trainer',
-        back_populates='daily_schedules',
+        back_populates='working_days',
         lazy='selectin'
     )
 
@@ -101,4 +104,32 @@ class DailySchedule(Base):
         return {
             'id': self.id,
             'work': self.work
+        }
+    
+
+class TrainerSchedule(Base):
+
+    __tablename__ = 'trainer_schedule'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    date: Mapped[str] = mapped_column(String)
+    time: Mapped[str] = mapped_column(String)
+    trainer_id: Mapped[int] =\
+        mapped_column(BigInteger, ForeignKey('trainer.id'))
+
+    trainer = relationship(
+        'Trainer',
+        back_populates='schedules',
+        lazy='selectin'
+    )
+
+    def __repr__(self):
+
+        return f'Date: {self.date}'
+
+    def get_data(self):
+
+        return {
+            'date': self.date,
+            'time': self.time
         }

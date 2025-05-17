@@ -6,9 +6,10 @@ from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import DialogManager, ShowMode
 from aiogram_dialog.widgets.kbd import Button, Select, ManagedRadio, SwitchTo
 from aiogram_dialog.widgets.input import MessageInput
+from aiogram_dialog.api.entities.context import Context
 
 from states import TrainerState, TrainerScheduleStates, ClientEditState
-from db import Client, DailySchedule, get_group, get_data_user, get_daily_schedules
+from db import Client, WorkingDay, get_group, get_data_user, get_work_days
 
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ OFFSET = 'offset'
 LIMIT = 'limit'
 RADIO_DEFAULT = 'radio_default'
 SEND_ALL = 'send_all'
-RADIO_MESS = 'radio_mess'
+RADIO = 'radio_mess'
 WORK_DEFAULT = 'work_default'
 SCHEDULES = 'schedules'
 
@@ -152,16 +153,16 @@ async def to_schedule_dlg(
     dialog_manager: DialogManager
 ):
     
-    daily_schedules: list[DailySchedule] = \
-        await get_daily_schedules(dialog_manager)
+    work_days: list[WorkingDay] = \
+        await get_work_days(dialog_manager)
     
     data = {}
-    schedules: dict[int, dict] = {schedule.id: schedule.get_data() for schedule in daily_schedules}
+    work_days_data: dict[int, dict] = {day.id: day.get_data() for day in work_days}
     
     default = dialog_manager.start_data[RADIO_DEFAULT]
     
     data[WORK_DEFAULT] = default
-    data[SCHEDULES] = schedules
+    data[SCHEDULES] = work_days_data
 
     await dialog_manager.start(
         data=data,
@@ -175,11 +176,11 @@ async def set_radio_default(
         widget: SwitchTo,
         dialog_manager: DialogManager
 ):
+    
+    context: Context = dialog_manager.current_context()
+    default = context.widget_data.get(RADIO, '1')
 
-    default = dialog_manager.start_data[RADIO_DEFAULT]
-    dialog_manager.dialog_data[SEND_ALL] = default
-
-    radio: ManagedRadio = dialog_manager.find(RADIO_MESS)
+    radio: ManagedRadio = dialog_manager.find(RADIO)
     await radio.set_checked(default)
 
 
@@ -189,20 +190,21 @@ async def send_message(
         dialog_manager: DialogManager
 ):
 
-    send_all = dialog_manager.dialog_data.get(SEND_ALL)
+    context: Context = dialog_manager.current_context()
+    item_id = context.widget_data.get(RADIO)
 
-    group = await get_group(dialog_manager)
-    for client in group:
-        if client[WORKOUTS] or send_all:
-            print(client)
+    dialog_manager.dialog_data.update(
+        {
+            OFFSET: 0,
+            LIMIT: 5
+        }
+    )
 
+    if item_id == '2':
+        group: list[dict] = await get_group(dialog_manager, False)
 
-async def process_selection(
-        callback: CallbackQuery,
-        widget: ManagedRadio,
-        dialog_manager: DialogManager,
-        item_id: str
-):
+    else:
+        group: list[dict] = await get_group(dialog_manager)
 
-    default = dialog_manager.start_data[RADIO_DEFAULT]
-    dialog_manager.dialog_data[SEND_ALL] = (item_id == default)
+    for user in group:
+        print(user)    

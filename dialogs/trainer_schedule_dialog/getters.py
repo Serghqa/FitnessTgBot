@@ -4,6 +4,7 @@ from typing import Any
 
 from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.kbd.select import ManagedMultiselect
+from aiogram_dialog.widgets.kbd.calendar_kbd import ManagedCalendar
 
 
 logger = logging.getLogger(__name__)
@@ -25,12 +26,9 @@ def format_schedule(data: dict) -> str:
 
 async def selection_getter(dialog_manager: DialogManager, **kwargs):
 
-    selected = dialog_manager.dialog_data.get(SELECTED_DATES, [])
-
     data_radio = await get_data_radio(dialog_manager)
 
     return {
-        'selected': ', '.join(sorted(selected)),
         'radio': data_radio[RADIO]
     }
 
@@ -51,3 +49,15 @@ async def get_data_radio(dialog_manager: DialogManager, **kwargs):
     data = [(format_schedule(data), id) for id, data in dialog_manager.start_data[SCHEDULES].items()]
 
     return {'radio': data}
+
+
+async def cancel_work_getter(dialog_manager: DialogManager, **kwargs):
+
+    selected: dict = dialog_manager.dialog_data.get(SELECTED_DATES)
+    
+    work_days = [date for date, item_id in selected.items() if item_id is None]
+    print(work_days)
+    
+    return {
+        'selected': ', '.join(sorted(work_days))
+    }
