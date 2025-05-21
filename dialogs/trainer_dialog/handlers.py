@@ -22,9 +22,9 @@ WORKOUT = 'workout'
 WORKOUTS = 'workouts'
 OFFSET = 'offset'
 LIMIT = 'limit'
-RADIO_DEFAULT = 'radio_default'
+RADIO_MESS = 'radio_mess'
+RADIO_GROUP = 'radio_pag'
 SEND_ALL = 'send_all'
-RADIO = 'radio_mess'
 WORK_DEFAULT = 'work_default'
 SCHEDULES = 'schedules'
 
@@ -61,20 +61,48 @@ async def get_client(
         await message.answer('id должен состоять только из цифр')
 
 
-async def _set_frame_group(dialog_manager: DialogManager, limit: int) -> None:
+async def _set_frame_group(
+    dialog_manager: DialogManager,
+    limit: int
+) -> None:
+
+    context: Context = dialog_manager.current_context()
+    all: bool = context.widget_data.get(RADIO_GROUP) == '1'
 
     dialog_manager.dialog_data[OFFSET] += limit
 
     if dialog_manager.dialog_data[OFFSET] < 0:
         dialog_manager.dialog_data[OFFSET] = 0
 
-    group: list[dict] = await get_group(dialog_manager)
+    group: list[dict] = await get_group(dialog_manager, all)
 
     if not group and dialog_manager.dialog_data[OFFSET] > 0:
         dialog_manager.dialog_data[OFFSET] = 0
         group: list[dict] = await get_group(dialog_manager)
 
     dialog_manager.dialog_data[GROUP] = group
+
+
+async def _set_radio_group(
+    dialog_manager: DialogManager
+):
+
+    context: Context = dialog_manager.current_context()
+    default = context.widget_data.get(RADIO_GROUP, '1')
+
+    radio: ManagedRadio = dialog_manager.find(RADIO_GROUP)
+    await radio.set_checked(default)
+
+
+async def render_group(
+    callback: CallbackQuery,
+    widget: Select,
+    dialog_manager: DialogManager,
+    item_id: str
+):
+
+    await set_frame(callback, widget, dialog_manager)
+    await dialog_manager.update(dialog_manager.dialog_data)
 
 
 async def set_frame(
@@ -89,6 +117,8 @@ async def set_frame(
             LIMIT: 5
         }
     )
+
+    await _set_radio_group(dialog_manager)
     await _set_frame_group(dialog_manager, 0)
 
 
@@ -152,16 +182,16 @@ async def to_schedule_dlg(
     widget: Button,
     dialog_manager: DialogManager
 ):
-    
+
     work_days: list[WorkingDay] = \
         await get_work_days(dialog_manager)
-    
+
+    work_days_data: dict[int, dict] = {
+        day.id: day.get_data() for day in work_days
+    }
+
     data = {}
-    work_days_data: dict[int, dict] = {day.id: day.get_data() for day in work_days}
-    
-    default = dialog_manager.start_data[RADIO_DEFAULT]
-    
-    data[WORK_DEFAULT] = default
+
     data[SCHEDULES] = work_days_data
 
     await dialog_manager.start(
@@ -171,16 +201,16 @@ async def to_schedule_dlg(
     )
 
 
-async def set_radio_default(
+async def set_radio_message(
         callback: CallbackQuery,
         widget: SwitchTo,
         dialog_manager: DialogManager
 ):
-    
-    context: Context = dialog_manager.current_context()
-    default = context.widget_data.get(RADIO, '1')
 
-    radio: ManagedRadio = dialog_manager.find(RADIO)
+    context: Context = dialog_manager.current_context()
+    default = context.widget_data.get(RADIO_MESS, '1')
+
+    radio: ManagedRadio = dialog_manager.find(RADIO_MESS)
     await radio.set_checked(default)
 
 
@@ -191,7 +221,7 @@ async def send_message(
 ):
 
     context: Context = dialog_manager.current_context()
-    item_id = context.widget_data.get(RADIO)
+    item_id = context.widget_data.get(RADIO_MESS)
 
     dialog_manager.dialog_data.update(
         {
@@ -207,4 +237,4 @@ async def send_message(
         group: list[dict] = await get_group(dialog_manager)
 
     for user in group:
-        print(user)    
+        print(user)

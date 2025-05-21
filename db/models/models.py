@@ -20,7 +20,7 @@ class Trainer(Base):
 
     working_days: Mapped[list['WorkingDay']] = \
         relationship('WorkingDay', back_populates='trainer', lazy='joined')
-    schedules = \
+    schedules: Mapped[list['TrainerSchedule']] = \
         relationship('TrainerSchedule', back_populates='trainer', lazy='joined')
 
     def __repr__(self):
@@ -52,7 +52,6 @@ class Client(Base):
     def get_data(self) -> dict[str, Any]:
 
         return {
-            'client': True,
             'id': self.id,
             'name': self.name,
             'workouts': self.workouts,
@@ -88,7 +87,7 @@ class WorkingDay(Base):
     work: Mapped[str] = mapped_column(String)
     trainer_id: Mapped[int] =\
         mapped_column(BigInteger, ForeignKey('trainer.id'))
-    
+
     trainer = relationship(
         'Trainer',
         back_populates='working_days',
@@ -105,7 +104,7 @@ class WorkingDay(Base):
             'id': self.id,
             'work': self.work
         }
-    
+
 
 class TrainerSchedule(Base):
 

@@ -27,9 +27,9 @@ async def get_data_group(dialog_manager: DialogManager, **kwargs):
         for i, client in enumerate(dialog_manager.dialog_data.get(GROUP))
     ]
 
-    return {GROUP: group}
+    return {GROUP: group, RADIO: [('🆓', 1), ('💎ᴠɪᴘ', 2)]}
 
 
 async def message_data(dialog_manager: DialogManager, **kwargs):
 
-    return {RADIO: [('Всем', 1), ('Оплаченным', 2)]}
+    return {RADIO: [('Всем', 1), ('Активные', 2)]}

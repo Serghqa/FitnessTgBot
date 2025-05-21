@@ -12,11 +12,22 @@ from string import ascii_lowercase, digits
 #  from config import load_config, Config
 
 from states import trainer_states, client_states
-from db import Trainer, add_client, add_trainer, get_data_user
+from db import add_client, add_trainer
 
 
 logger = logging.getLogger(__name__)
-simbols = ascii_lowercase + digits
+
+SIMBOLS = ascii_lowercase + digits
+TRAINER = 'trainer'
+CLIENT = 'client'
+ID = 'id'
+NAME = 'name'
+
+
+def data_preparation(data: dict) -> None:
+
+    data.pop(CLIENT)
+    data.pop(TRAINER)
 
 
 async def to_trainer_dialog(
@@ -25,10 +36,12 @@ async def to_trainer_dialog(
     dialog_manager: DialogManager
 ):
 
+    data_preparation(dialog_manager.start_data)
+
     await dialog_manager.start(
         data=dialog_manager.start_data,
         state=trainer_states.TrainerState.main,
-        mode=StartMode.RESET_STACK
+        mode=StartMode.RESET_STACK,
     )
 
 
@@ -38,9 +51,12 @@ async def to_client_dialog(
     dialog_manager: DialogManager
 ):
 
+    data_preparation(dialog_manager.start_data)
+
     await dialog_manager.start(
+        data=dialog_manager.start_data,
         state=client_states.ClientState.main,
-        mode=StartMode.RESET_STACK
+        mode=StartMode.RESET_STACK,
     )
 
 
@@ -80,9 +96,13 @@ async def trainer_is_valid(
         text: str
 ):
 
-    await add_trainer(dialog_manager)
-    await add_client(dialog_manager, dialog_manager.event.from_user.id)  # для отладки
-    data = await get_data_user(dialog_manager, Trainer)
+    id = dialog_manager.event.from_user.id
+    name = dialog_manager.event.from_user.full_name or 'no_name'
+
+    await add_trainer(id, name, dialog_manager)
+    await add_client(dialog_manager, id)  # для отладки
+
+    data = {ID: id, NAME: name}
 
     await dialog_manager.start(
         data=data,

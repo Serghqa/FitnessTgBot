@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 start_router = Router()
 
 CLIENT = 'client'
+TRAINER = 'trainer'
+ID = 'id'
 
 
 @start_router.message(F.text, CommandStart())
@@ -25,9 +27,15 @@ async def command_start(
         dialog_manager: DialogManager,
 ):
 
-    data = await get_data_user(dialog_manager, Client)
-    if not data.get(CLIENT):
-        data = await get_data_user(dialog_manager, Trainer)
+    data = {TRAINER: False, CLIENT: False}
+
+    user_data = await get_data_user(dialog_manager, Client)
+    data[CLIENT] = user_data.get(ID) is not None
+    if not data[CLIENT]:
+        user_data = await get_data_user(dialog_manager, Trainer)
+        data[TRAINER] = user_data.get(TRAINER) is not None
+
+    data.update(user_data)
 
     await dialog_manager.start(
         data=data,

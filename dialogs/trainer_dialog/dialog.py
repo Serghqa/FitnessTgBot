@@ -2,7 +2,14 @@ from operator import itemgetter
 
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Format, Const
-from aiogram_dialog.widgets.kbd import Button, Select, Group, Row, Radio, SwitchTo, Start
+from aiogram_dialog.widgets.kbd import (
+    Button,
+    Select,
+    Group,
+    Row,
+    Radio,
+    SwitchTo
+)
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram.enums import ContentType
 
@@ -11,12 +18,13 @@ from .handlers import (
     set_frame,
     to_main_window,
     on_client,
-    set_radio_default,
+    set_radio_message,
     send_message,
     next_page,
     back_page,
     get_client,
-    to_schedule_dlg
+    to_schedule_dlg,
+    render_group
 )
 from .getters import get_data, get_data_group, message_data
 
@@ -44,7 +52,7 @@ trainer_dialog = Dialog(
         SwitchTo(
             text=Const('Сделать объявление'),
             id='send_mess',
-            on_click=set_radio_default,
+            on_click=set_radio_message,
             state=TrainerState.message,
         ),
         Button(
@@ -101,6 +109,18 @@ trainer_dialog = Dialog(
                     text=Const('⬅️'),
                     id='back',
                     on_click=back_page,
+                ),
+                Radio(
+                    Format(
+                        text='🔘 ✅ {item[0]}'
+                    ),
+                    Format(
+                        text='⚪️ {item[0]}'
+                    ),
+                    id='radio_pag',
+                    item_id_getter=itemgetter(1),
+                    items='radio',
+                    on_click=render_group,
                 ),
                 Button(
                     text=Const('➡️'),

@@ -17,7 +17,16 @@ from db.models import (
     WorkingDay,
     TrainerSchedule
 )
-from typing import Any
+
+
+OFFSET = 'offset'
+LIMIT = 'limit'
+SESSION = 'session'
+ID = 'id'
+WORKOUT = 'workout'
+WORKOUTS = 'workouts'
+SCHEDULES = 'schedules'
+WORK = 'work'
 
 
 async def get_user(
@@ -31,16 +40,19 @@ async def get_user(
     return user
 
 
-async def add_trainer(dialog_manager: DialogManager) -> None:
+async def add_trainer(
+    id: int,
+    name: str,
+    dialog_manager: DialogManager
+) -> None:
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
-
-    id = dialog_manager.event.from_user.id
-    name = dialog_manager.event.from_user.full_name or 'no_name'
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     user: Trainer = set_trainer(id=id, name=name)
-    work_day1: WorkingDay = set_work_day(user, 1, ', '.join(map(str, range(9, 18))))
-    work_day2: WorkingDay = set_work_day(user, 2, ', '.join(map(str, range(10, 20))))
+    work_day1: WorkingDay = \
+        set_work_day(user, 1, ', '.join(map(str, range(9, 18))))
+    work_day2: WorkingDay = \
+        set_work_day(user, 2, ', '.join(map(str, range(10, 20))))
     work_day3: WorkingDay = \
         set_work_day(user, 3, ', '.join(map(str, range(10, 22))))
 
@@ -50,9 +62,12 @@ async def add_trainer(dialog_manager: DialogManager) -> None:
     await session.commit()
 
 
-async def add_client(dialog_manager: DialogManager, trainer_id: int) -> None:
+async def add_client(
+    dialog_manager: DialogManager,
+    trainer_id: int
+) -> None:
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     fake = Faker(locale='ru_RU')
 
@@ -65,17 +80,17 @@ async def add_client(dialog_manager: DialogManager, trainer_id: int) -> None:
 
 async def update_workouts(dialog_manager: DialogManager) -> None:
 
-    client_id = dialog_manager.start_data['id']
-    value = dialog_manager.start_data['workout'] + \
-        dialog_manager.start_data['workouts']
+    client_id = dialog_manager.start_data[ID]
+    value = dialog_manager.start_data[WORKOUT] + \
+        dialog_manager.start_data[WORKOUTS]
 
     if value < 0:
         value = 0
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    dialog_manager.start_data['workouts'] = value
-    dialog_manager.start_data['workout'] = 0
+    dialog_manager.start_data[WORKOUTS] = value
+    dialog_manager.start_data[WORKOUT] = 0
 
     stmt = select(Client).filter(client_id == Client.id)
     res = await session.execute(stmt)
@@ -89,21 +104,14 @@ async def get_data_user(
     dialog_manager: DialogManager,
     model: Client | Trainer,
     id: int | None = None
-) -> dict[str, Any]:
+) -> dict:
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
     id = id or dialog_manager.event.from_user.id
 
-    data = {
-        'client': None,
-        'trainer': None,
-        'id': None,
-        'name': None,
-        'workouts': None,
-        'trainer_id': None
-    }
+    data = {}
 
-    user = await get_user(session, id, model)
+    user: Trainer | Client = await get_user(session, id, model)
 
     if user:
         data.update(user.get_data())
@@ -111,13 +119,16 @@ async def get_data_user(
     return data
 
 
-async def get_group(dialog_manager: DialogManager, all=True) -> list[dict]:
+async def get_group(
+    dialog_manager: DialogManager,
+    all=True
+) -> list[dict]:
 
-    offset = dialog_manager.dialog_data.get('offset')
-    limit = dialog_manager.dialog_data.get('limit')
+    offset = dialog_manager.dialog_data.get(OFFSET)
+    limit = dialog_manager.dialog_data.get(LIMIT)
     id = dialog_manager.event.from_user.id
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     if all:
         smtm = select(Client).filter(
@@ -141,7 +152,7 @@ async def get_work_days(
 
     id = dialog_manager.event.from_user.id
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     user: Trainer = await get_user(session, id, Trainer)
     daily_schedules: list[WorkingDay] = user.working_days
@@ -149,9 +160,13 @@ async def get_work_days(
     return daily_schedules
 
 
-async def update_working_day(dialog_manager: DialogManager, id: int, value: str):
+async def update_working_day(
+    dialog_manager: DialogManager,
+    id: int,
+    value: str
+):
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     schedule: WorkingDay = await session.get(WorkingDay, id)
 
@@ -160,19 +175,21 @@ async def update_working_day(dialog_manager: DialogManager, id: int, value: str)
     await session.commit()
 
 
-async def add_trainer_schedule(dialog_manager: DialogManager, data: dict):
+async def add_trainer_schedule(
+    dialog_manager: DialogManager,
+    data: dict
+):
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    working_days: dict[int, dict] = dialog_manager.start_data['schedules']
+    working_days: dict[int, dict] = dialog_manager.start_data[SCHEDULES]
 
     schedules: list[TrainerSchedule] = [
         set_trainer_schedule(
             date,
-            working_days[int(work_item)]['work'],
+            working_days[int(work_item)][WORK],
             dialog_manager.event.from_user.id
-        ) \
-            for date, work_item in data.items() if work_item
+        ) for date, work_item in data.items() if work_item
     ]
 
     session.add_all(schedules)
@@ -182,7 +199,7 @@ async def add_trainer_schedule(dialog_manager: DialogManager, data: dict):
 
 async def get_trainer_schedules(dialog_manager: DialogManager) -> list[dict]:
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     today = date.today()
 
@@ -190,4 +207,6 @@ async def get_trainer_schedules(dialog_manager: DialogManager) -> list[dict]:
 
     user: Trainer = await get_user(session, user_id, Trainer)
 
-    return [day.get_data() for day in user.schedules if date.fromisoformat(day.date) > today]
+    return [
+        day.get_data() for day in user.schedules if date.fromisoformat(day.date) > today
+    ]
