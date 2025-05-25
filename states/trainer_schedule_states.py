@@ -6,4 +6,4 @@ class TrainerScheduleStates(StatesGroup):
     schedule = State()
     work = State()
     edit_work = State()
-    cancel_work = State()
+    selected_date = State()

@@ -11,9 +11,9 @@ def set_client(id: int, name: str, trainer_id: int) -> Client:
     return Client(id=id, name=name, trainer_id=trainer_id)
 
 
-def set_schedule(client_id: int, trainer_id: int) -> Schedule:
+def set_schedule(client_id: int, trainer_id: int, date: str, time: int) -> Schedule:
 
-    return Schedule(client_id=client_id, trainer_id=trainer_id)
+    return Schedule(client_id=client_id, trainer_id=trainer_id, date=date, time=time)
 
 
 def set_work_day(trainer: Trainer, id: int, work: str) -> WorkingDay:

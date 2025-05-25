@@ -3,8 +3,9 @@ import logging
 from typing import Any
 
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import DialogManager, ShowMode
+from aiogram_dialog import DialogManager, ShowMode, Data
 from aiogram_dialog.widgets.kbd import Button, Select, ManagedRadio, SwitchTo
+from aiogram_dialog.widgets.kbd.select import ManagedRadio
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.api.entities.context import Context
 
@@ -24,9 +25,23 @@ OFFSET = 'offset'
 LIMIT = 'limit'
 RADIO_MESS = 'radio_mess'
 RADIO_GROUP = 'radio_pag'
+RADIO_WORK = 'radio_work'
 SEND_ALL = 'send_all'
 WORK_DEFAULT = 'work_default'
 SCHEDULES = 'schedules'
+WIDGET_DATA = 'widget_data'
+
+
+def _get_curent_widget_context(
+    dialog_manager: DialogManager,
+    key: str,
+    default='1'
+) -> Any:
+
+    context: Context = dialog_manager.current_context()
+    widget_data = context.widget_data.get(key, default)
+
+    return widget_data
 
 
 async def get_client(
@@ -78,7 +93,7 @@ async def _set_frame_group(
 
     if not group and dialog_manager.dialog_data[OFFSET] > 0:
         dialog_manager.dialog_data[OFFSET] = 0
-        group: list[dict] = await get_group(dialog_manager)
+        group: list[dict] = await get_group(dialog_manager, all)
 
     dialog_manager.dialog_data[GROUP] = group
 
@@ -87,20 +102,20 @@ async def _set_radio_group(
     dialog_manager: DialogManager
 ):
 
-    context: Context = dialog_manager.current_context()
-    default = context.widget_data.get(RADIO_GROUP, '1')
+    widget_id: str = _get_curent_widget_context(dialog_manager, RADIO_GROUP)
 
     radio: ManagedRadio = dialog_manager.find(RADIO_GROUP)
-    await radio.set_checked(default)
+    await radio.set_checked(widget_id)
 
 
 async def render_group(
     callback: CallbackQuery,
-    widget: Select,
+    widget: ManagedRadio,
     dialog_manager: DialogManager,
     item_id: str
 ):
 
+    await widget.set_checked(item_id)
     await set_frame(callback, widget, dialog_manager)
     await dialog_manager.update(dialog_manager.dialog_data)
 
@@ -177,22 +192,26 @@ async def on_client(
     )
 
 
-async def to_schedule_dlg(
+async def to_schedule_dialog(
     callback: CallbackQuery,
     widget: Button,
     dialog_manager: DialogManager
 ):
 
+    context: Context = dialog_manager.current_context()
+
+    widget_id: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
     work_days: list[WorkingDay] = \
         await get_work_days(dialog_manager)
 
-    work_days_data: dict[int, dict] = {
-        day.id: day.get_data() for day in work_days
+    work_days_data: dict[int, str] = {
+        day.id: day.work for day in work_days
     }
 
     data = {}
 
-    data[SCHEDULES] = work_days_data
+    data[SCHEDULES] = {id: work for id, work in sorted(work_days_data.items())}
+    data[WIDGET_DATA] = {RADIO_WORK: widget_id}
 
     await dialog_manager.start(
         data=data,
@@ -207,11 +226,10 @@ async def set_radio_message(
         dialog_manager: DialogManager
 ):
 
-    context: Context = dialog_manager.current_context()
-    default = context.widget_data.get(RADIO_MESS, '1')
+    widget_id: str = _get_curent_widget_context(dialog_manager, RADIO_MESS)
 
     radio: ManagedRadio = dialog_manager.find(RADIO_MESS)
-    await radio.set_checked(default)
+    await radio.set_checked(widget_id)
 
 
 async def send_message(
@@ -220,8 +238,7 @@ async def send_message(
         dialog_manager: DialogManager
 ):
 
-    context: Context = dialog_manager.current_context()
-    item_id = context.widget_data.get(RADIO_MESS)
+    widget_id: str = _get_curent_widget_context(dialog_manager, RADIO_MESS)
 
     dialog_manager.dialog_data.update(
         {
@@ -230,7 +247,7 @@ async def send_message(
         }
     )
 
-    if item_id == '2':
+    if widget_id == '2':
         group: list[dict] = await get_group(dialog_manager, False)
 
     else:
@@ -238,3 +255,13 @@ async def send_message(
 
     for user in group:
         print(user)
+
+
+async def process_result(
+    start_data: Data,
+    result: dict | None,
+    dialog_manager: DialogManager
+):
+    
+    context: Context = dialog_manager.current_context()
+    context.widget_data.update(result)

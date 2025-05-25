@@ -1,9 +1,12 @@
 from aiogram_dialog import DialogManager
+from aiogram_dialog.api.entities.context import Context
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from faker import Faker
+
+from random import randint
 
 from datetime import date
 
@@ -12,10 +15,12 @@ from db.models import (
     set_client,
     set_work_day,
     set_trainer_schedule,
+    set_schedule,
     Trainer,
     Client,
     WorkingDay,
-    TrainerSchedule
+    TrainerSchedule,
+    Schedule
 )
 
 
@@ -27,6 +32,7 @@ WORKOUT = 'workout'
 WORKOUTS = 'workouts'
 SCHEDULES = 'schedules'
 WORK = 'work'
+RADIO_WORK = 'radio_work'
 
 
 async def get_user(
@@ -50,11 +56,11 @@ async def add_trainer(
 
     user: Trainer = set_trainer(id=id, name=name)
     work_day1: WorkingDay = \
-        set_work_day(user, 1, ', '.join(map(str, range(9, 18))))
+        set_work_day(user, 1, ','.join(map(str, range(9, 18))))
     work_day2: WorkingDay = \
-        set_work_day(user, 2, ', '.join(map(str, range(10, 20))))
+        set_work_day(user, 2, ','.join(map(str, range(10, 20))))
     work_day3: WorkingDay = \
-        set_work_day(user, 3, ', '.join(map(str, range(10, 22))))
+        set_work_day(user, 3, ','.join(map(str, range(10, 22))))
 
     session.add_all(
         [user, work_day1, work_day2, work_day3]
@@ -71,8 +77,9 @@ async def add_client(
 
     fake = Faker(locale='ru_RU')
 
-    for i in range(100_000_000, 100_000_050):  # удалить
-        user: Client = set_client(i, fake.name(), trainer_id)  # удалить
+    for id in range(100_000_000, 100_000_050):  # удалить
+        user: Client = set_client(id, fake.name(), trainer_id)  # удалить
+        user.workouts = randint(1, 10)
         session.add(user)  # удалить
 
     await session.commit()  # удалить
@@ -141,7 +148,7 @@ async def get_group(
         ).order_by(Client.id).offset(offset).limit(limit)
 
     rows = await session.execute(smtm)
-    group = [row.Client.get_data() for row in rows.all()]
+    group = [row.Client.get_data() for row in rows.unique()]
 
     return group
 
@@ -182,14 +189,12 @@ async def add_trainer_schedule(
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    working_days: dict[int, dict] = dialog_manager.start_data[SCHEDULES]
-
     schedules: list[TrainerSchedule] = [
         set_trainer_schedule(
             date,
-            working_days[int(work_item)][WORK],
+            dialog_manager.start_data[SCHEDULES][work_item],
             dialog_manager.event.from_user.id
-        ) for date, work_item in data.items() if work_item
+        ) for date, work_item in data.items()
     ]
 
     session.add_all(schedules)

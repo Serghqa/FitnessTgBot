@@ -1,10 +1,10 @@
 from operator import itemgetter
 
-from aiogram_dialog import Dialog, Window, ShowMode
+from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import (
+    Multiselect,
     SwitchTo,
-    Cancel,
     Button,
     Radio,
     Column,
@@ -16,25 +16,33 @@ from .handlers import (
     CustomCalendar,
     CustomMultiselect,
     on_date_selected,
-    set_radio_default,
+    set_radio_work,
+    set_radio_calendar,
     reset_checked,
     process_selection,
     apply_selected,
     apply_work,
     set_checked,
-    reset_calendar
+    reset_calendar,
+    process_result,
+    process_start
 )
-from .getters import selection_getter, get_multiselect_data, get_data_radio, cancel_work_getter
+from .getters import (
+    selection_getter,
+    get_multiselect_data,
+    get_data_radio,
+    get_current_schedule
+)
 
 
 RADIO = Radio(
     Format(
-        text='🔘 ✅ {item[0]}'
+        text='☑️ {item[0]}'
     ),
     Format(
-        text='⚪️ {item[0]}'
+        text='⬜ {item[0]}'
     ),
-    id='rad',
+    id='radio_work',
     item_id_getter=itemgetter(1),
     items='radio',
     on_click=process_selection,
@@ -49,19 +57,19 @@ trainer_schedule_dialog = Dialog(
         SwitchTo(
             Const('Редактор смены'),
             id='to_work',
-            on_click=set_radio_default,
+            on_click=set_radio_work,
             state=TrainerScheduleStates.work,
         ),
         SwitchTo(
             Const('Создать расписание'),
             id='to_cal',
-            on_click=set_radio_default,
+            on_click=set_radio_calendar,
             state=TrainerScheduleStates.schedule
         ),
-        Cancel(
+        Button(
             text=Const('Назад'),
             id='can_sched',
-            show_mode=ShowMode.EDIT,
+            on_click=process_result,
         ),
         state=TrainerScheduleStates.main,
     ),
@@ -87,23 +95,24 @@ trainer_schedule_dialog = Dialog(
                 on_click=apply_selected,
             ),
         ),
-        SwitchTo(
-            text=Const('Отменить запись'),
-            id='to_can_cal',
-            state=TrainerScheduleStates.cancel_work,
-        ),
         getter=selection_getter,
         state=TrainerScheduleStates.schedule,
     ),
     Window(
-        Const(
-            text='Отмена ранее созданных рабочих смен',
+        Format(
+            text='{date}'
         ),
-        CustomCalendar(
-            id='can_cal',
+        Column(
+            Multiselect(
+                Format('✅ {item[0]}'),
+                Format('{item[0]}'),
+                id='sel_d',
+                item_id_getter=itemgetter(1),
+                items='rows',
+            ),
         ),
-        getter=cancel_work_getter,
-        state=TrainerScheduleStates.cancel_work,
+        getter=get_current_schedule,
+        state=TrainerScheduleStates.selected_date,
     ),
     Window(
         Const(
@@ -148,13 +157,15 @@ trainer_schedule_dialog = Dialog(
                 on_click=reset_checked,
                 state=TrainerScheduleStates.work,
             ),
-            Button(
+            SwitchTo(
                 text=Const('Применить'),
                 id='apply',
                 on_click=apply_work,
+                state=TrainerScheduleStates.work,
             ),
         ),
         getter=get_multiselect_data,
         state=TrainerScheduleStates.edit_work,
     ),
+    on_start=process_start,
 )

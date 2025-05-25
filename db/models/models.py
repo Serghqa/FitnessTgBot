@@ -16,7 +16,7 @@ class Trainer(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String)
 
-    trainings = relationship('Schedule', back_populates='trainer')
+    trainings = relationship('Schedule', back_populates='trainer', lazy='joined')
 
     working_days: Mapped[list['WorkingDay']] = \
         relationship('WorkingDay', back_populates='trainer', lazy='joined')
@@ -43,7 +43,7 @@ class Client(Base):
     workouts: Mapped[int] = mapped_column(Integer, default=0)
     trainer_id: Mapped[int] = mapped_column(BigInteger)
 
-    trainings = relationship('Schedule', back_populates='client')
+    trainings = relationship('Schedule', back_populates='client', lazy='joined')
 
     def __repr__(self):
 
@@ -69,6 +69,8 @@ class Schedule(Base):
         mapped_column(BigInteger, ForeignKey('client.id'))
     trainer_id: Mapped[int] = \
         mapped_column(BigInteger, ForeignKey('trainer.id'))
+    date: Mapped[str] = mapped_column(String)
+    time: Mapped[int] = mapped_column(Integer)
 
     client = relationship('Client', back_populates='trainings')
     trainer = relationship('Trainer', back_populates='trainings')

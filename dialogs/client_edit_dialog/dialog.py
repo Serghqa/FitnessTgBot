@@ -18,7 +18,7 @@ from .getters import get_data
 client_edit_dialog = Dialog(
     Window(
         Format(
-            text='Окно клиента {name}\nТренировок {workouts}',
+            text='{name}\nТренировок {workouts}',
         ),
         SwitchTo(
             text=Const('Тренировки'),
@@ -43,7 +43,7 @@ client_edit_dialog = Dialog(
                 on_click=workout_sub,
             ),
             Button(
-                text=Const('Применить'),
+                text=Format('{workout}'),
                 id='apply',
                 on_click=workout_apply,
             ),

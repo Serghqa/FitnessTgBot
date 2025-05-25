@@ -23,8 +23,9 @@ from .handlers import (
     next_page,
     back_page,
     get_client,
-    to_schedule_dlg,
-    render_group
+    to_schedule_dialog,
+    render_group,
+    process_result
 )
 from .getters import get_data, get_data_group, message_data
 
@@ -58,7 +59,7 @@ trainer_dialog = Dialog(
         Button(
             text=Const('Рассписание'),
             id='to_sched',
-            on_click=to_schedule_dlg,
+            on_click=to_schedule_dialog,
         ),
         getter=get_data,
         state=TrainerState.main,
@@ -70,10 +71,10 @@ trainer_dialog = Dialog(
         ),
         Radio(
             Format(
-                text='🔘 ✅ {item[0]}'
+                text='☑️ {item[0]}'
             ),
             Format(
-                text='⚪️ {item[0]}'
+                text='⬜ {item[0]}'
             ),
             id='radio_mess',
             item_id_getter=itemgetter(1),
@@ -112,15 +113,15 @@ trainer_dialog = Dialog(
                 ),
                 Radio(
                     Format(
-                        text='🔘 ✅ {item[0]}'
+                        text='☑️ {item[0]}'
                     ),
                     Format(
-                        text='⚪️ {item[0]}'
+                        text='⬜ {item[0]}'
                     ),
                     id='radio_pag',
                     item_id_getter=itemgetter(1),
                     items='radio',
-                    on_click=render_group,
+                    on_state_changed=render_group,
                 ),
                 Button(
                     text=Const('➡️'),
@@ -138,4 +139,5 @@ trainer_dialog = Dialog(
         getter=get_data_group,
         state=TrainerState.group,
     ),
+    on_process_result=process_result,
 )
