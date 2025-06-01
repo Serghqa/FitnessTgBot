@@ -1,5 +1,7 @@
 from operator import itemgetter
 
+from aiogram import F
+
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import (
@@ -25,7 +27,10 @@ from .handlers import (
     set_checked,
     reset_calendar,
     process_result,
-    process_start
+    process_start,
+    clear_selected_date,
+    cancel_training,
+    cancel_work
 )
 from .getters import (
     selection_getter,
@@ -35,12 +40,16 @@ from .getters import (
 )
 
 
+IS_CANCEL = 'is_cancel'
+IS_APPLY = 'is_apply'
+
+
 RADIO = Radio(
     Format(
-        text='☑️ {item[0]}'
+        text='☑️ {item[0]} {item[2]}'
     ),
     Format(
-        text='⬜ {item[0]}'
+        text='⬜ {item[0]} {item[2]}'
     ),
     id='radio_work',
     item_id_getter=itemgetter(1),
@@ -61,7 +70,7 @@ trainer_schedule_dialog = Dialog(
             state=TrainerScheduleStates.work,
         ),
         SwitchTo(
-            Const('Создать расписание'),
+            Const('Редактор расписания'),
             id='to_cal',
             on_click=set_radio_calendar,
             state=TrainerScheduleStates.schedule
@@ -93,6 +102,7 @@ trainer_schedule_dialog = Dialog(
                 text=Const('Применить'),
                 id='apply_cal',
                 on_click=apply_selected,
+                when=F[IS_APPLY],
             ),
         ),
         getter=selection_getter,
@@ -104,15 +114,52 @@ trainer_schedule_dialog = Dialog(
         ),
         Column(
             Multiselect(
-                Format('✅ {item[0]}'),
-                Format('{item[0]}'),
+                Format('❌ {item[1]} - {item[2]}:00'),
+                Format('{item[1]} - {item[2]}: 00'),
                 id='sel_d',
-                item_id_getter=itemgetter(1),
+                item_id_getter=itemgetter(0),
                 items='rows',
             ),
         ),
+        Row(
+            SwitchTo(
+                text=Const('Назад'),
+                id='canc_sel',
+                on_click=clear_selected_date,
+                state=TrainerScheduleStates.schedule,
+            ),
+            Button(
+                text=Const('❗Отменить запись(и)'),
+                id='canc_tr',
+                on_click=cancel_training,
+                when=F[IS_CANCEL],
+            ),
+        ),
+        SwitchTo(
+            text=Const('‼️Отменить рабочий день'),
+            id='can_work',
+            state=TrainerScheduleStates.confirmation,
+        ),
         getter=get_current_schedule,
         state=TrainerScheduleStates.selected_date,
+    ),
+    Window(
+        Const(
+            text='Вы действительно хотите отменить рабочий день? '\
+                'Все клиенты у, которых есть запись, будут отменены.',
+        ),
+        SwitchTo(
+            Const('Да, отменить'),
+            id='conf_y',
+            on_click=cancel_work,
+            state=TrainerScheduleStates.schedule,
+        ),
+        SwitchTo(
+            Const('Нет, работаем'),
+            id='conf_n',
+            state=TrainerScheduleStates.selected_date,
+        ),
+        state=TrainerScheduleStates.confirmation,
     ),
     Window(
         Const(

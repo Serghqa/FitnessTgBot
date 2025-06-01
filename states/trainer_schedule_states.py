@@ -7,3 +7,4 @@ class TrainerScheduleStates(StatesGroup):
     work = State()
     edit_work = State()
     selected_date = State()
+    confirmation = State()

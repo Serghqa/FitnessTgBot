@@ -16,9 +16,9 @@ def set_schedule(client_id: int, trainer_id: int, date: str, time: int) -> Sched
     return Schedule(client_id=client_id, trainer_id=trainer_id, date=date, time=time)
 
 
-def set_work_day(trainer: Trainer, id: int, work: str) -> WorkingDay:
+def set_work_day(item: int, work: str, trainer_id: int) -> WorkingDay:
 
-    return WorkingDay(trainer=trainer, id=id, work=work)
+    return WorkingDay(item=item, work=work, trainer_id=trainer_id)
 
 
 def set_trainer_schedule(date: str, time: str, trainer_id: int) -> TrainerSchedule:

@@ -1,7 +1,7 @@
 import logging
 
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import DialogManager
+from aiogram_dialog import DialogManager, ShowMode
 from aiogram_dialog.widgets.kbd import Button
 from aiogram_dialog.widgets.input import ManagedTextInput
 
@@ -81,3 +81,14 @@ async def error_code(
 ):
 
     await message.answer(text='Error code')
+
+
+async def back_group(
+    callback: CallbackQuery,
+    widget: Button,
+    dialog_manager: DialogManager
+):
+    
+    await dialog_manager.done(
+        show_mode=ShowMode.EDIT,
+    )

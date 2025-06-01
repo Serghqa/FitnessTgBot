@@ -33,6 +33,7 @@ WORKOUTS = 'workouts'
 SCHEDULES = 'schedules'
 WORK = 'work'
 RADIO_WORK = 'radio_work'
+NAME = 'name'
 
 
 async def get_user(
@@ -56,11 +57,11 @@ async def add_trainer(
 
     user: Trainer = set_trainer(id=id, name=name)
     work_day1: WorkingDay = \
-        set_work_day(user, 1, ','.join(map(str, range(9, 18))))
+        set_work_day(1, ','.join(map(str, range(9, 18))), id)
     work_day2: WorkingDay = \
-        set_work_day(user, 2, ','.join(map(str, range(10, 20))))
+        set_work_day(2, ','.join(map(str, range(10, 20))), id)
     work_day3: WorkingDay = \
-        set_work_day(user, 3, ','.join(map(str, range(10, 22))))
+        set_work_day(3, ','.join(map(str, range(10, 22))), id)
 
     session.add_all(
         [user, work_day1, work_day2, work_day3]
@@ -99,8 +100,8 @@ async def update_workouts(dialog_manager: DialogManager) -> None:
     dialog_manager.start_data[WORKOUTS] = value
     dialog_manager.start_data[WORKOUT] = 0
 
-    stmt = select(Client).filter(client_id == Client.id)
-    res = await session.execute(stmt)
+    smtm = select(Client).where(client_id == Client.id)
+    res = await session.execute(smtm)
     client = res.scalar()
     client.workouts = value
 
@@ -114,6 +115,7 @@ async def get_data_user(
 ) -> dict:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
     id = id or dialog_manager.event.from_user.id
 
     data = {}
@@ -138,17 +140,17 @@ async def get_group(
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     if all:
-        smtm = select(Client).filter(
+        smtm = select(Client).where(
             Client.trainer_id == id
         ).order_by(Client.id).offset(offset).limit(limit)
 
     else:
-        smtm = select(Client).filter(
+        smtm = select(Client).where(
             Client.trainer_id == id, Client.workouts > 0
         ).order_by(Client.id).offset(offset).limit(limit)
 
     rows = await session.execute(smtm)
-    group = [row.Client.get_data() for row in rows.unique()]
+    group = [client.get_data() for client in rows.unique().scalars().all()]
 
     return group
 
@@ -162,9 +164,9 @@ async def get_work_days(
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     user: Trainer = await get_user(session, id, Trainer)
-    daily_schedules: list[WorkingDay] = user.working_days
+    working_days: list[WorkingDay] = user.working_days
 
-    return daily_schedules
+    return working_days
 
 
 async def update_working_day(
@@ -175,9 +177,15 @@ async def update_working_day(
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    schedule: WorkingDay = await session.get(WorkingDay, id)
+    user_id: int = dialog_manager.event.from_user.id
 
-    schedule.work = value
+    user: Trainer = await get_user(session, user_id, Trainer)
+
+    work_days: list[WorkingDay] = user.working_days
+
+    for work_day in work_days:
+        if work_day.item == id:
+            work_day.work = value
 
     await session.commit()
 
@@ -200,6 +208,107 @@ async def add_trainer_schedule(
     session.add_all(schedules)
 
     await session.commit()
+
+
+async def cancel_trainer_schedule(
+    dialog_manager: DialogManager,
+    date: str
+):
+    
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
+    trainer_id: int = dialog_manager.event.from_user.id
+
+    stmt = select(TrainerSchedule).where(
+        TrainerSchedule.trainer_id == trainer_id,
+        TrainerSchedule.date == date
+    )
+
+    res = await session.execute(stmt)
+    trainer_schedule: TrainerSchedule = res.scalar()
+
+    await session.delete(trainer_schedule)
+
+    await session.commit()
+
+
+async def add_training(
+    dialog_manager: DialogManager,
+    date: str,
+    client_id: int,
+    trainer_id: int,
+    time: int
+):
+    
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
+    schedule: Schedule = set_schedule(
+        client_id,
+        trainer_id,
+        date,
+        time
+    )
+
+    session.add(schedule)
+
+    client: Client = await get_user(session, client_id, Client)
+    client.workouts -= 1
+
+    await session.commit()
+
+
+async def cancel_training_db(
+    dialog_manager: DialogManager,
+    client_id: int,
+    trainer_id: int,
+    date: str,
+    time: int
+):
+    
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
+    stmt = select(Schedule).where(
+        Schedule.client_id == client_id,
+        Schedule.trainer_id == trainer_id,
+        Schedule.date == date,
+        Schedule.time == time 
+    )
+    
+    res = await session.execute(stmt)
+    schedule: Schedule = res.scalar()
+
+    client: Client = schedule.client
+    client.workouts += 1
+
+    await session.delete(schedule)
+
+    await session.commit()
+
+
+async def get_trainings(
+    dialog_manager: DialogManager,
+    date: str
+) -> list[dict]:
+    
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
+    user_id: int = dialog_manager.event.from_user.id
+
+    smtm = select(Schedule).where(
+        Schedule.trainer_id == user_id,
+        Schedule.date == date
+    ).order_by(Schedule.date)
+    rows = await session.execute(smtm)
+
+    result = []
+
+    for row in rows.scalars().unique().all():
+        name = row.client.name
+        data = row.get_data()
+        data.update({NAME: name})
+        result.append(data)
+        
+    return result
 
 
 async def get_trainer_schedules(dialog_manager: DialogManager) -> list[dict]:

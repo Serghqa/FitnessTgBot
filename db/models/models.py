@@ -16,8 +16,8 @@ class Trainer(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String)
 
-    trainings = relationship('Schedule', back_populates='trainer', lazy='joined')
-
+    trainings: Mapped[list['Schedule']] = \
+        relationship('Schedule', back_populates='trainer', lazy='joined')
     working_days: Mapped[list['WorkingDay']] = \
         relationship('WorkingDay', back_populates='trainer', lazy='joined')
     schedules: Mapped[list['TrainerSchedule']] = \
@@ -43,7 +43,8 @@ class Client(Base):
     workouts: Mapped[int] = mapped_column(Integer, default=0)
     trainer_id: Mapped[int] = mapped_column(BigInteger)
 
-    trainings = relationship('Schedule', back_populates='client', lazy='joined')
+    trainings: Mapped[list['Schedule']] = \
+        relationship('Schedule', back_populates='client', lazy='joined')
 
     def __repr__(self):
 
@@ -72,20 +73,30 @@ class Schedule(Base):
     date: Mapped[str] = mapped_column(String)
     time: Mapped[int] = mapped_column(Integer)
 
-    client = relationship('Client', back_populates='trainings')
-    trainer = relationship('Trainer', back_populates='trainings')
+    client = relationship('Client', back_populates='trainings', lazy='joined')
+    trainer = relationship('Trainer', back_populates='trainings', lazy='joined')
 
     def __repr__(self):
 
         return f'Training trainer_id={self.trainer_id}, '\
             f'client_id={self.client_id}'
+    
+    def get_data(self) -> dict[str, Any]:
+
+        return {
+            'client_id': self.client_id,
+            'trainer_id': self.trainer_id,
+            'date': self.date,
+            'time': self.time
+        }
 
 
 class WorkingDay(Base):
 
     __tablename__ = 'working_day'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    item: Mapped[int] = mapped_column(Integer)
     work: Mapped[str] = mapped_column(String)
     trainer_id: Mapped[int] =\
         mapped_column(BigInteger, ForeignKey('trainer.id'))

@@ -10,7 +10,8 @@ from .handlers import (
     workout_sub,
     is_valid_type,
     successful_code,
-    error_code
+    error_code,
+    back_group
 )
 from .getters import get_data
 
@@ -25,10 +26,10 @@ client_edit_dialog = Dialog(
             id='to_ed_wor',
             state=ClientEditState.workout_edit,
         ),
-        Cancel(
+        Button(
             text=Const('В группу'),
-            id='can_ed',
-            show_mode=ShowMode.EDIT,
+            id='back_gr',
+            on_click=back_group,
         ),
         state=ClientEditState.main,
     ),
@@ -39,7 +40,7 @@ client_edit_dialog = Dialog(
         Row(
             Button(
                 text=Const('-'),
-                id='add',
+                id='sub',
                 on_click=workout_sub,
             ),
             Button(
@@ -49,7 +50,7 @@ client_edit_dialog = Dialog(
             ),
             Button(
                 text=Const('+'),
-                id='sub',
+                id='add',
                 on_click=workout_add,
             ),
             id='row_sc',

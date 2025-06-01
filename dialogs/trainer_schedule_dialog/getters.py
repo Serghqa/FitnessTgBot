@@ -2,8 +2,7 @@ import logging
 
 from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.kbd.select import ManagedMultiselect
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram_dialog.api.entities import Context
 
 from db import Trainer, get_user
 
@@ -24,6 +23,12 @@ DATA = 'data'
 START = 'start'
 STOP = 'stop'
 BREAKS = 'breaks'
+CLIENTS = 'clients'
+TIME = 'time'
+NAME = 'name'
+SEL_D = 'sel_d'
+IS_CANCEL = 'is_cancel'
+IS_APPLY = 'is_apply'
 
 
 def format_schedule(data: str) -> str:
@@ -35,9 +40,17 @@ def format_schedule(data: str) -> str:
 
 async def selection_getter(dialog_manager: DialogManager, **kwargs):
 
-    data_radio = await get_data_radio(dialog_manager)
+    data_radio: dict[str, list] = await get_data_radio(dialog_manager)
 
-    return {RADIO: data_radio[RADIO]}
+    is_apply: bool = any(
+        item for item in dialog_manager.dialog_data[SELECTED_DATES].values() \
+            if isinstance(item, int)
+    )
+
+    return {
+        RADIO: data_radio[RADIO],
+        IS_APPLY: is_apply
+    }
 
 
 async def get_multiselect_data(dialog_manager: DialogManager, **kwargs):
@@ -53,8 +66,10 @@ async def get_multiselect_data(dialog_manager: DialogManager, **kwargs):
     
 async def get_data_radio(dialog_manager: DialogManager, **kwargs):
 
+    marks = {1: '🟢', 2: '🔵', 3: '🟣'}
+
     data = [
-        (format_schedule(data), id) for id, data in \
+        (format_schedule(data), id, marks[id]) for id, data in \
             dialog_manager.start_data[SCHEDULES].items()
     ]
 
@@ -63,21 +78,17 @@ async def get_data_radio(dialog_manager: DialogManager, **kwargs):
 
 async def get_current_schedule(dialog_manager: DialogManager, **kwargs):
 
-    selected_date: dict = dialog_manager.dialog_data[SELECTED_DATE]
-    start, stop = selected_date[DATA][START], selected_date[DATA][STOP]
-    breaks = []
-    if selected_date[DATA][BREAKS] != 'нет':
-        breaks = selected_date[DATA][BREAKS].split(',')
-    rows = [(item, item) for item in range(start, stop+1) if str(item) not in breaks]
+    context: Context = dialog_manager.current_context()
 
+    selected_date: dict = dialog_manager.dialog_data[SELECTED_DATE][DATE]
+    clients: list = dialog_manager.dialog_data[SELECTED_DATE][CLIENTS]
+    
+    rows = [(i, data[NAME], data[TIME]) for i, data in enumerate(clients)]
 
-    session: AsyncSession = dialog_manager.middleware_data.get('session')
-    id: int = dialog_manager.event.from_user.id
-    user: Trainer = await get_user(session, id, Trainer)
-    for client in user.trainings:
-        print(client.date, client.time)
+    is_cancel: bool = any(context.widget_data.get(SEL_D, []))
 
     return {
-        DATE: selected_date[DATE],
-        ROWS: rows
+        DATE: selected_date,
+        ROWS: rows,
+        IS_CANCEL: is_cancel
     }

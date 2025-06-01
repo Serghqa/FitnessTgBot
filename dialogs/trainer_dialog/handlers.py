@@ -54,9 +54,9 @@ async def get_client(
         await message.answer('Ввели не корректные данные')
 
     elif message.text.isdigit():
-        data = await get_data_user(dialog_manager, Client, int(message.text))
+        data: dict = await get_data_user(dialog_manager, Client, int(message.text))
 
-        if data[CLIENT]:
+        if data:
             for user in dialog_manager.dialog_data[GROUP]:
                 if data[ID] == user[ID]:
                     user[WORKOUT] = 0
@@ -102,10 +102,10 @@ async def _set_radio_group(
     dialog_manager: DialogManager
 ):
 
-    widget_id: str = _get_curent_widget_context(dialog_manager, RADIO_GROUP)
+    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_GROUP)
 
     radio: ManagedRadio = dialog_manager.find(RADIO_GROUP)
-    await radio.set_checked(widget_id)
+    await radio.set_checked(widget_item)
 
 
 async def render_group(
@@ -198,20 +198,18 @@ async def to_schedule_dialog(
     dialog_manager: DialogManager
 ):
 
-    context: Context = dialog_manager.current_context()
-
-    widget_id: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
+    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
     work_days: list[WorkingDay] = \
         await get_work_days(dialog_manager)
 
     work_days_data: dict[int, str] = {
-        day.id: day.work for day in work_days
+        day.item: day.work for day in work_days
     }
 
     data = {}
 
     data[SCHEDULES] = {id: work for id, work in sorted(work_days_data.items())}
-    data[WIDGET_DATA] = {RADIO_WORK: widget_id}
+    data[WIDGET_DATA] = {RADIO_WORK: widget_item}
 
     await dialog_manager.start(
         data=data,
@@ -226,10 +224,10 @@ async def set_radio_message(
         dialog_manager: DialogManager
 ):
 
-    widget_id: str = _get_curent_widget_context(dialog_manager, RADIO_MESS)
+    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_MESS)
 
     radio: ManagedRadio = dialog_manager.find(RADIO_MESS)
-    await radio.set_checked(widget_id)
+    await radio.set_checked(widget_item)
 
 
 async def send_message(
@@ -238,7 +236,7 @@ async def send_message(
         dialog_manager: DialogManager
 ):
 
-    widget_id: str = _get_curent_widget_context(dialog_manager, RADIO_MESS)
+    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_MESS)
 
     dialog_manager.dialog_data.update(
         {
@@ -247,7 +245,7 @@ async def send_message(
         }
     )
 
-    if widget_id == '2':
+    if widget_item == '2':
         group: list[dict] = await get_group(dialog_manager, False)
 
     else:
@@ -262,6 +260,6 @@ async def process_result(
     result: dict | None,
     dialog_manager: DialogManager
 ):
-    
-    context: Context = dialog_manager.current_context()
-    context.widget_data.update(result)
+    if result:
+        context: Context = dialog_manager.current_context()
+        context.widget_data.update(result)
