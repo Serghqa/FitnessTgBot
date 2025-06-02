@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 SIMBOLS = ascii_lowercase + digits
 TRAINER = 'trainer'
+TRAINER_ID = 'trainer_id'
 CLIENT = 'client'
 ID = 'id'
 NAME = 'name'
@@ -28,6 +29,14 @@ def data_preparation(data: dict) -> None:
 
     data.pop(CLIENT)
     data.pop(TRAINER)
+
+
+def set_data_user(dialog_manager: DialogManager) -> dict:
+
+    id = dialog_manager.event.from_user.id
+    name = dialog_manager.event.from_user.full_name or 'no_name'
+
+    return {ID: id, NAME: name}
 
 
 async def to_trainer_dialog(
@@ -96,13 +105,9 @@ async def trainer_is_valid(
         text: str
 ):
 
-    id = dialog_manager.event.from_user.id
-    name = dialog_manager.event.from_user.full_name or 'no_name'
-
-    await add_trainer(id, name, dialog_manager)
-    await add_client(dialog_manager, id)  # для отладки
-
-    data = {ID: id, NAME: name}
+    data: dict = set_data_user(dialog_manager)
+    await add_trainer(data[ID], data[NAME], dialog_manager)
+    #await add_client(dialog_manager, id)  # для отладки
 
     await dialog_manager.start(
         data=data,
@@ -127,11 +132,16 @@ async def client_is_valid(
     dialog_manager: DialogManager,
     text: str
 ):
+    
+    data: dict = set_data_user(dialog_manager)
 
     trainer_id = int(text)
     await add_client(dialog_manager, trainer_id)
 
+    data[TRAINER_ID] = trainer_id
+
     await dialog_manager.start(
+        data=data,
         state=client_states.ClientState.main,
         mode=StartMode.RESET_STACK
     )

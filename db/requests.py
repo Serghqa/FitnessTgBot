@@ -76,14 +76,26 @@ async def add_client(
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    fake = Faker(locale='ru_RU')
+    id: int = dialog_manager.event.from_user.id 
+    name: str = dialog_manager.event.from_user.full_name or 'no_name'
+    user: Client = set_client(
+        id,
+        name,
+        trainer_id
+    )
 
-    for id in range(100_000_000, 100_000_050):  # удалить
-        user: Client = set_client(id, fake.name(), trainer_id)  # удалить
-        user.workouts = randint(1, 10)
-        session.add(user)  # удалить
+    session.add(user)
 
-    await session.commit()  # удалить
+    await session.commit()
+
+    #fake = Faker(locale='ru_RU')
+
+    #for id in range(100_000_000, 100_000_050):  # удалить
+    #    user: Client = set_client(id, fake.name(), trainer_id)  # удалить
+    #    user.workouts = randint(1, 10)
+    #    session.add(user)  # удалить
+
+    #await session.commit()  # удалить
 
 
 async def update_workouts(dialog_manager: DialogManager) -> None:
@@ -287,12 +299,13 @@ async def cancel_training_db(
 
 async def get_trainings(
     dialog_manager: DialogManager,
-    date: str
+    date: str,
+    trainer_id: int = None
 ) -> list[dict]:
     
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    user_id: int = dialog_manager.event.from_user.id
+    user_id: int = trainer_id or dialog_manager.event.from_user.id
 
     smtm = select(Schedule).where(
         Schedule.trainer_id == user_id,
@@ -311,13 +324,16 @@ async def get_trainings(
     return result
 
 
-async def get_trainer_schedules(dialog_manager: DialogManager) -> list[dict]:
+async def get_trainer_schedules(
+    dialog_manager: DialogManager,
+    trainer_id: int = None
+) -> list[dict]:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     today = date.today()
 
-    user_id = dialog_manager.event.from_user.id
+    user_id = trainer_id or dialog_manager.event.from_user.id
 
     user: Trainer = await get_user(session, user_id, Trainer)
 

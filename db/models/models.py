@@ -28,7 +28,6 @@ class Trainer(Base):
 
     def get_data(self) -> dict[str, Any]:
         return {
-            'trainer': True,
             'id': self.id,
             'name': self.name
         }

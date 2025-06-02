@@ -57,7 +57,7 @@ validate_dialog = Dialog(
                 id='cl',
                 state=StartSG.client,
             ),
-            when=~F[TRAINER] & ~F[CLIENT],
+            #when=~F[TRAINER] & ~F[CLIENT],
         ),
         Button(
             text=Const('В тренерскую'),

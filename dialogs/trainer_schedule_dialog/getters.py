@@ -88,7 +88,7 @@ async def get_current_schedule(dialog_manager: DialogManager, **kwargs):
     is_cancel: bool = any(context.widget_data.get(SEL_D, []))
 
     return {
-        DATE: selected_date,
+        SELECTED_DATE: selected_date,
         ROWS: rows,
         IS_CANCEL: is_cancel
     }

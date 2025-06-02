@@ -300,7 +300,8 @@ async def cancel_training(
     clients: list[dict] = [client for i, client in enumerate(clients) if str(i) not in items]
 
     dialog_manager.dialog_data[SELECTED_DATE][CLIENTS] = clients
-    context.widget_data[SEL_D] = []
+    if SEL_D in context.widget_data:
+        context.widget_data[SEL_D].clear()
 
 
 async def cancel_work(
@@ -329,9 +330,10 @@ async def cancel_work(
         work_date
     )
 
-    dialog_manager.dialog_data[SELECTED_DATE][CLIENTS] = []
+    dialog_manager.dialog_data.pop(SELECTED_DATE)
     dialog_manager.dialog_data[SELECTED_DAYS_KEY].pop(work_date)
-    context.widget_data[SEL_D] = []
+    if SEL_D in context.widget_data:
+        context.widget_data.clear()
 
 
 async def apply_selected(
@@ -355,15 +357,15 @@ async def apply_selected(
             dialog_manager.dialog_data[SELECTED_DAYS_KEY][date_] = value
 
             ############### Удалить ###############
-            for id in range(100_000_000, 100_000_005):
-                t = id - 100_000_000 + 10
-                await add_training(
-                    dialog_manager,
-                    date_,
-                    id,
-                    dialog_manager.event.from_user.id,
-                    t
-                )
+            #for id in range(100_000_000, 100_000_005):
+            #    t = id - 100_000_000 + 10
+            #    await add_training(
+            #        dialog_manager,
+            #        date_,
+            #        id,
+            #        dialog_manager.event.from_user.id,
+            #        t
+            #    )
 
 
 async def set_radio_work(

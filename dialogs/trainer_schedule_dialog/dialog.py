@@ -110,13 +110,14 @@ trainer_schedule_dialog = Dialog(
     ),
     Window(
         Format(
-            text='{date}'
+            text='{selected_date}'
         ),
         Column(
             Multiselect(
                 Format('❌ {item[1]} - {item[2]}:00'),
                 Format('{item[1]} - {item[2]}: 00'),
                 id='sel_d',
+                
                 item_id_getter=itemgetter(0),
                 items='rows',
             ),
