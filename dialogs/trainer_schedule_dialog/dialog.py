@@ -46,10 +46,10 @@ IS_APPLY = 'is_apply'
 
 RADIO = Radio(
     Format(
-        text='☑️ {item[0]} {item[2]}'
+        text='☑️ {item[0]} {item[2]}',
     ),
     Format(
-        text='⬜ {item[0]} {item[2]}'
+        text='⬜ {item[0]} {item[2]}',
     ),
     id='radio_work',
     item_id_getter=itemgetter(1),
@@ -110,14 +110,13 @@ trainer_schedule_dialog = Dialog(
     ),
     Window(
         Format(
-            text='{selected_date}'
+            text='Выбранная дата {selected_date}'
         ),
         Column(
             Multiselect(
                 Format('❌ {item[1]} - {item[2]}:00'),
                 Format('{item[1]} - {item[2]}: 00'),
                 id='sel_d',
-                
                 item_id_getter=itemgetter(0),
                 items='rows',
             ),
@@ -151,13 +150,13 @@ trainer_schedule_dialog = Dialog(
         ),
         SwitchTo(
             Const('Да, отменить'),
-            id='conf_y',
+            id='can_y',
             on_click=cancel_work,
             state=TrainerScheduleStates.schedule,
         ),
         SwitchTo(
             Const('Нет, работаем'),
-            id='conf_n',
+            id='can_n',
             state=TrainerScheduleStates.selected_date,
         ),
         state=TrainerScheduleStates.confirmation,

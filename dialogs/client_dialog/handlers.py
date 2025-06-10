@@ -3,8 +3,8 @@ import logging
 from aiogram import Bot
 
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import DialogManager, ShowMode, Data, ChatEvent
-from aiogram_dialog.widgets.kbd import Button, Select, ManagedRadio, SwitchTo, Calendar, CalendarScope, ManagedCalendar
+from aiogram_dialog import DialogManager, ShowMode
+from aiogram_dialog.widgets.kbd import ManagedRadio, SwitchTo, Calendar, CalendarScope, ManagedCalendar, Radio
 from aiogram_dialog.widgets.kbd.select import ManagedRadio
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.text import Text, Format
@@ -17,28 +17,33 @@ from aiogram_dialog.widgets.kbd.calendar_kbd import (
     CalendarScopeView,
     CalendarYearsView,
 )
+from aiogram_dialog.api.internal import RawKeyboard
 
 from babel.dates import get_day_names, get_month_names
 
-from db import get_trainer_schedules, get_trainings, Trainer, Client
+from db import get_trainer_schedules, get_trainings, get_schedule, Trainer, Client, Schedule, add_training, get_data_user
 
 from datetime import date
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from states import ClientState
 
 
 logger = logging.getLogger(__name__)
 
+EXIST = 'exist'
 TRAINER_ID = 'trainer_id'
 DATE = 'date'
 TIME = 'time'
 SELECTED_DAYS_KEY = 'selected_dates'
+SELECTED_DATE = 'selected_date'
+SIGN_UP = 'sign_up'
 CAL = 'cal'
+WORKOUTS = 'workouts'
 
 
 def split_time(time: str) -> list[int]:
 
-    return time.split(',')
+    return list(map(int, time.split(',')))
 
 
 class WeekDay(Text):
@@ -111,6 +116,27 @@ class CustomCalendar(Calendar):
         }
 
 
+class CustomRadio(Radio):
+
+    async def _render_keyboard(
+        self,
+        data: dict,
+        manager: DialogManager,
+    ) -> RawKeyboard:
+        
+        keyboard = []
+        row = []
+
+        for pos, item in enumerate(self.items_getter(data)):
+            row.append(await self._render_button(pos, item, item, data, manager))
+            if len(row) == 4:
+                keyboard.append(row)
+                row = []
+        if row:
+            keyboard.append(row)
+        
+        return keyboard
+
 
 async def send_message(
         message: Message,
@@ -149,20 +175,117 @@ async def set_calendar(
             dialog_manager.start_data[TRAINER_ID]
         )
 
-        while schedules:
-            schedule: dict = schedules.pop()
-            if schedule[TIME] not in dates[date]:
-                selected_dates.setdefault(date, []).append(schedule[TIME])
-    print(selected_dates)
+        for schedule in schedules:
+            dates[date].remove(schedule[TIME])
 
-    #selected_dates = {date: time for date, time in selected_dates.items() if time}
+        if dates[date]:
+            selected_dates[date] = dates[date]
+
+    await reset_radio(
+        callback,
+        widget,
+        dialog_manager
+    )
 
 
 async def on_date_selected(
-    callback: ChatEvent,
+    callback: CallbackQuery,
     widget: ManagedCalendar,
     dialog_manager: DialogManager,
     clicked_date: date, /,
 ):
 
-    pass
+    if clicked_date.isoformat() in dialog_manager.dialog_data[SELECTED_DAYS_KEY]:
+        dialog_manager.dialog_data[SELECTED_DATE] = \
+            clicked_date.isoformat()
+        
+        #user_data: Client = await get_data_user(
+        #    dialog_manager,
+        #    Client,
+        #    dialog_manager.start_data[TRAINER_ID]
+        #)
+        #dialog_manager.start_data[WORKOUTS] = user_data[WORKOUTS]
+        
+        await dialog_manager.switch_to(
+            state=ClientState.sign_training,
+            show_mode=ShowMode.EDIT,
+        )
+
+
+async def clear_data(
+    callback: CallbackQuery,
+    widget: SwitchTo,
+    dialog_manager: DialogManager
+):
+    
+    dialog_manager.dialog_data.clear()
+
+    await dialog_manager.switch_to(
+        state=ClientState.main,
+        show_mode=ShowMode.EDIT,
+    )
+
+
+async def reset_radio(
+    callback: CallbackQuery,
+    widget: SwitchTo,
+    dialog_manager: DialogManager
+):
+    
+    radio: ManagedRadio = dialog_manager.find('rad_sched')
+
+    await radio.set_checked(None)
+
+
+async def process_selection(
+    callback: CallbackQuery,
+    widget: ManagedRadio,
+    dialog_manager: DialogManager,
+    item_id: str
+):
+    
+    selected_date: str = dialog_manager.dialog_data[SELECTED_DATE]
+    time: int = dialog_manager.dialog_data[SELECTED_DAYS_KEY][selected_date][int(item_id)]
+
+    dialog_manager.dialog_data[TIME] = time
+
+
+async def exist_sign(
+    callback: CallbackQuery,
+    widget: SwitchTo,
+    dialog_manager: DialogManager
+):
+    
+    client_id: int = dialog_manager.event.from_user.id
+    trainer_id: int = dialog_manager.start_data[TRAINER_ID]
+    date: str = dialog_manager.dialog_data[SELECTED_DATE]
+    time: int = dialog_manager.dialog_data[TIME]
+
+    # Для теста
+    #await add_training(
+    #    dialog_manager,
+    #    date,
+    #    client_id,
+    #    trainer_id,
+    #    time
+    #)
+
+    schedule = await get_schedule(
+        dialog_manager,
+        date,
+        time,
+        trainer_id,
+        client_id
+    )
+
+    dialog_manager.dialog_data[EXIST] = schedule is None
+
+    if schedule is None:
+        await add_training(
+            dialog_manager,
+            date,
+            client_id,
+            trainer_id,
+            time
+        )
+        dialog_manager.start_data[WORKOUTS] -= 1

@@ -99,9 +99,9 @@ class MarkedDay(Text):
         selected = dialog_manager.dialog_data.get(SELECTED_DAYS_KEY, {})
 
         if serial_date in selected:
-            if isinstance(selected[serial_date], int):
-                radio_item = selected[serial_date]
-                return self.mark[int(radio_item)]
+            radio_item = selected[serial_date]
+            if isinstance(radio_item, int):
+                return self.mark[radio_item]
             return '🔴'
 
         return await self.other.render_text(data, dialog_manager)
@@ -147,35 +147,6 @@ class CustomCalendar(Calendar):
 
 class CustomMultiselect(Multiselect):
 
-    def __init__(
-        self,
-        checked_text,
-        unchecked_text,
-        id,
-        item_id_getter,
-        items,
-        min_selected = 0,
-        max_selected = 0,
-        type_factory: TypeFactory[T] = str,
-        on_click = None,
-        on_state_changed = None,
-        when = None
-    ):
-        
-        super().__init__(
-            checked_text,
-            unchecked_text,
-            id,
-            item_id_getter,
-            items,
-            min_selected,
-            max_selected,
-            type_factory,
-            on_click,
-            on_state_changed,
-            when
-        )
-
     async def _render_keyboard(
         self,
         data: dict,
@@ -192,6 +163,13 @@ class CustomMultiselect(Multiselect):
                 row = []
         
         return keyboard
+    
+
+def _update_selected_dates(selected: dict, today: str) -> None:
+
+    for date_, _ in list(selected.items()):
+        if date_ <= today:
+            selected.pop(date_)
 
 
 def _get_curent_widget_context(
@@ -221,58 +199,59 @@ def _transform_time(data: str) -> dict:
 
 
 async def on_date_selected(
-    callback: ChatEvent,
+    callback: CallbackQuery,
     widget: ManagedCalendar,
     dialog_manager: DialogManager,
     clicked_date: date, /,
 ):
 
     today = date.today().isoformat()
-
-    widget_item = _get_curent_widget_context(dialog_manager, RADIO_WORK)
-
-    selected: dict = dialog_manager.dialog_data.get(SELECTED_DAYS_KEY)
     serial_date = clicked_date.isoformat()
 
-    if serial_date in selected:
-        if isinstance(selected[serial_date], int):
-            selected.pop(serial_date)
+    selected: dict = dialog_manager.dialog_data.get(SELECTED_DAYS_KEY, {})
+
+    _update_selected_dates(selected, today)
+    
+    if today < serial_date:
+        
+        widget_item = _get_curent_widget_context(dialog_manager, RADIO_WORK)
+
+        if serial_date in selected:
+            if isinstance(selected[serial_date], int):
+                selected.pop(serial_date)
+            else:
+                data: dict = selected[serial_date]
+
+                clients: list[dict] = await get_trainings(
+                    dialog_manager,
+                    serial_date
+                )
+
+                dialog_manager.dialog_data[SELECTED_DATE] = {
+                    DATE: serial_date,
+                    DATA: data,
+                    CLIENTS: clients
+                }
+
+                await dialog_manager.switch_to(
+                    state=TrainerScheduleStates.selected_date,
+                    show_mode=ShowMode.EDIT
+                )
+
         else:
-            data: dict = selected[serial_date]
-            await callback.answer(
-                f'Выбранная дата {serial_date}, '
-                f'время {data[START]}-{data[STOP]}, '
-                f'перерыв {data[BREAKS]}'
-            )
-
-            clients: list[dict] = await get_trainings(
-                dialog_manager,
-                serial_date
-            )
-
-            dialog_manager.dialog_data[SELECTED_DATE] = {
-                DATE: serial_date,
-                DATA: data,
-                CLIENTS: clients
-            }
-
-            await dialog_manager.switch_to(
-                state=TrainerScheduleStates.selected_date,
-                show_mode=ShowMode.EDIT
-            )
-
-    else:
-        if today < serial_date:
             selected[serial_date] = int(widget_item)
-
+        
 
 async def clear_selected_date(
     callback: CallbackQuery,
     widget: SwitchTo,
     dialog_manager: DialogManager
 ):
-    
+    today: str = date.today().isoformat()
+    selected: dict = dialog_manager.dialog_data[SELECTED_DAYS_KEY]
+
     del dialog_manager.dialog_data[SELECTED_DATE]
+    _update_selected_dates(selected, today)
 
 
 async def cancel_training(
@@ -281,6 +260,18 @@ async def cancel_training(
     dialog_manager: DialogManager
 ):
     
+    today: str = date.today().isoformat()
+
+    if today >= dialog_manager.dialog_data[SELECTED_DATE][DATE]:
+        await callback.answer(
+            text='Данные устарели, попробуйте еще раз, пожалуйста.',
+            show_alert=True,
+        )
+        await dialog_manager.switch_to(
+            state=TrainerScheduleStates.schedule,
+            show_mode=ShowMode.EDIT,
+        )
+
     context: Context = dialog_manager.current_context()
 
     items: list[str] = context.widget_data.get(SEL_D, [])
@@ -347,6 +338,10 @@ async def apply_selected(
             dialog_manager.dialog_data.get(SELECTED_DAYS_KEY).items() \
                 if isinstance(item, int)
     }
+
+    today = date.today().isoformat()
+
+    _update_selected_dates(selected, today)
 
     if selected:
         await add_trainer_schedule(dialog_manager, selected)

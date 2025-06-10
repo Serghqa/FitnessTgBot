@@ -27,7 +27,7 @@ client_edit_dialog = Dialog(
             state=ClientEditState.workout_edit,
         ),
         Button(
-            text=Const('В группу'),
+            text=Const('Назад'),
             id='back_gr',
             on_click=back_group,
         ),

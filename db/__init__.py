@@ -13,7 +13,8 @@ from .requests import (
     add_trainer_schedule,
     get_trainer_schedules,
     cancel_training_db,
-    cancel_trainer_schedule
+    cancel_trainer_schedule,
+    get_schedule
 )
 
 
@@ -37,5 +38,6 @@ __all__ = [
     add_trainer_schedule,
     get_trainer_schedules,
     cancel_training_db,
-    cancel_trainer_schedule
+    cancel_trainer_schedule,
+    get_schedule
 ]

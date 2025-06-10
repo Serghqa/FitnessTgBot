@@ -42,7 +42,15 @@ async def workout_apply(
     dialog_manager: DialogManager
 ):
 
-    await update_workouts(dialog_manager)
+    try:
+        await update_workouts(dialog_manager)
+    except ValueError:
+        await callback.answer(
+            text='Во время редактирования, клиент производил операции связанные с записью,' \
+                ' данные были измененны.' \
+                ' Повторите вашу операцию еще раз, пожалуйста!',
+            show_alert=True,
+        )
 
 
 def is_valid_type(code: str):

@@ -103,21 +103,26 @@ async def update_workouts(dialog_manager: DialogManager) -> None:
     client_id = dialog_manager.start_data[ID]
     value = dialog_manager.start_data[WORKOUT] + \
         dialog_manager.start_data[WORKOUTS]
-
+    
     if value < 0:
         value = 0
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    dialog_manager.start_data[WORKOUTS] = value
-    dialog_manager.start_data[WORKOUT] = 0
+    stmt = select(Client).where(client_id == Client.id)
+    result = await session.execute(stmt)
+    client = result.scalar()
 
-    smtm = select(Client).where(client_id == Client.id)
-    res = await session.execute(smtm)
-    client = res.scalar()
-    client.workouts = value
-
-    await session.commit()
+    if client.workouts == dialog_manager.start_data[WORKOUTS]:
+        client.workouts = value
+        await session.commit()
+        
+        dialog_manager.start_data[WORKOUTS] = value
+        dialog_manager.start_data[WORKOUT] = 0
+    
+    else:
+        dialog_manager.start_data[WORKOUTS] = client.workouts
+        raise ValueError
 
 
 async def get_data_user(
@@ -152,17 +157,17 @@ async def get_group(
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     if all:
-        smtm = select(Client).where(
+        stmt = select(Client).where(
             Client.trainer_id == id
         ).order_by(Client.id).offset(offset).limit(limit)
 
     else:
-        smtm = select(Client).where(
+        stmt = select(Client).where(
             Client.trainer_id == id, Client.workouts > 0
         ).order_by(Client.id).offset(offset).limit(limit)
 
-    rows = await session.execute(smtm)
-    group = [client.get_data() for client in rows.unique().scalars().all()]
+    result = await session.execute(stmt)
+    group = [client.get_data() for client in result.unique().scalars().all()]
 
     return group
 
@@ -273,7 +278,7 @@ async def cancel_training_db(
     dialog_manager: DialogManager,
     client_id: int,
     trainer_id: int,
-    date: str,
+    date_: str,
     time: int
 ):
     
@@ -282,17 +287,20 @@ async def cancel_training_db(
     stmt = select(Schedule).where(
         Schedule.client_id == client_id,
         Schedule.trainer_id == trainer_id,
-        Schedule.date == date,
+        Schedule.date == date_,
         Schedule.time == time 
     )
     
-    res = await session.execute(stmt)
-    schedule: Schedule = res.scalar()
+    result = await session.execute(stmt)
+    schedule: Schedule = result.scalar()
+    if schedule is not None:
+        today: str = date.today().isoformat()
+        
+        if today <= date_:
+            client: Client = schedule.client
+            client.workouts += 1
 
-    client: Client = schedule.client
-    client.workouts += 1
-
-    await session.delete(schedule)
+        await session.delete(schedule)
 
     await session.commit()
 
@@ -307,11 +315,11 @@ async def get_trainings(
 
     user_id: int = trainer_id or dialog_manager.event.from_user.id
 
-    smtm = select(Schedule).where(
+    stmt = select(Schedule).where(
         Schedule.trainer_id == user_id,
         Schedule.date == date
     ).order_by(Schedule.date)
-    rows = await session.execute(smtm)
+    rows = await session.execute(stmt)
 
     result = []
 
@@ -340,3 +348,25 @@ async def get_trainer_schedules(
     return [
         day.get_data() for day in user.schedules if date.fromisoformat(day.date) > today
     ]
+
+
+async def get_schedule(
+    dialog_manager: DialogManager,
+    date: str,
+    time: int,
+    trainer_id: int,
+    client_id: int
+):
+    
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
+    stmt = select(Schedule).where(
+        Schedule.client_id == client_id,
+        Schedule.trainer_id == trainer_id,
+        Schedule.date == date,
+        Schedule.time == time
+    )
+
+    result = await session.execute(stmt)
+
+    return result.first()

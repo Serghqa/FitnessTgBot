@@ -54,21 +54,15 @@ async def get_client(
         await message.answer('Ввели не корректные данные')
 
     elif message.text.isdigit():
-        data: dict = await get_data_user(dialog_manager, Client, int(message.text))
+        user: dict = await get_data_user(dialog_manager, Client, int(message.text))
 
-        if data:
-            for user in dialog_manager.dialog_data[GROUP]:
-                if data[ID] == user[ID]:
-                    user[WORKOUT] = 0
-
-                    await dialog_manager.start(
-                        state=ClientEditState.main,
-                        data=user,
-                        show_mode=ShowMode.SEND
-                    )
-
-                    break
-
+        if user:
+            user[WORKOUT] = 0
+            await dialog_manager.start(
+                state=ClientEditState.main,
+                data=user,
+                show_mode=ShowMode.SEND
+            )
         else:
             await message.answer('Нет такого клиента')
 
@@ -182,7 +176,18 @@ async def on_client(
         item_id: str
 ):
 
+    trainer_id: int = dialog_manager.event.from_user.id
+    user_data: dict[str, Any] = await get_data_user(dialog_manager, Client, trainer_id)
+
     data: dict[str, Any] = dialog_manager.dialog_data[GROUP][int(item_id)]
+    
+    if any(value != user_data.get(key, value) for key, value in data.items()):
+        await callback.answer(
+            text='Данные клиента были изменены.',
+            show_alert=True,
+        )
+
+    data.update(user_data)
     data[WORKOUT] = 0
 
     await dialog_manager.start(

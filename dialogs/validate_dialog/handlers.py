@@ -12,7 +12,7 @@ from string import ascii_lowercase, digits
 #  from config import load_config, Config
 
 from states import trainer_states, client_states
-from db import add_client, add_trainer
+from db import add_client, add_trainer, get_data_user, Client
 
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,7 @@ TRAINER_ID = 'trainer_id'
 CLIENT = 'client'
 ID = 'id'
 NAME = 'name'
+WORKOUTS = 'workouts'
 
 
 def data_preparation(data: dict) -> None:
@@ -107,7 +108,7 @@ async def trainer_is_valid(
 
     data: dict = set_data_user(dialog_manager)
     await add_trainer(data[ID], data[NAME], dialog_manager)
-    #await add_client(dialog_manager, id)  # для отладки
+    #await add_client(dialog_manager, data[ID])  # для отладки
 
     await dialog_manager.start(
         data=data,
@@ -139,6 +140,7 @@ async def client_is_valid(
     await add_client(dialog_manager, trainer_id)
 
     data[TRAINER_ID] = trainer_id
+    data[WORKOUTS] = 0
 
     await dialog_manager.start(
         data=data,

@@ -4,8 +4,6 @@ from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.kbd.select import ManagedMultiselect
 from aiogram_dialog.api.entities import Context
 
-from db import Trainer, get_user
-
 
 logger = logging.getLogger(__name__)
 
