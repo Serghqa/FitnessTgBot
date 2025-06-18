@@ -34,6 +34,7 @@ SCHEDULES = 'schedules'
 WORK = 'work'
 RADIO_WORK = 'radio_work'
 NAME = 'name'
+TRAINER_ID = 'trainer_id'
 
 
 async def get_user(
@@ -100,24 +101,25 @@ async def add_client(
 
 async def update_workouts(dialog_manager: DialogManager) -> None:
 
-    client_id = dialog_manager.start_data[ID]
-    value = dialog_manager.start_data[WORKOUT] + \
+    client_id: int = dialog_manager.start_data[ID]
+    trainer_id: int = dialog_manager.event.from_user.id
+    workout: int = dialog_manager.start_data[WORKOUT] + \
         dialog_manager.start_data[WORKOUTS]
     
-    if value < 0:
-        value = 0
+    if workout < 0:
+        workout = 0
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    stmt = select(Client).where(client_id == Client.id)
+    stmt = select(Client).where(client_id == Client.id, trainer_id == Client.trainer_id)
     result = await session.execute(stmt)
     client = result.scalar()
 
     if client.workouts == dialog_manager.start_data[WORKOUTS]:
-        client.workouts = value
+        client.workouts = workout
         await session.commit()
         
-        dialog_manager.start_data[WORKOUTS] = value
+        dialog_manager.start_data[WORKOUTS] = workout
         dialog_manager.start_data[WORKOUT] = 0
     
     else:
@@ -150,9 +152,9 @@ async def get_group(
     all=True
 ) -> list[dict]:
 
-    offset = dialog_manager.dialog_data.get(OFFSET)
-    limit = dialog_manager.dialog_data.get(LIMIT)
-    id = dialog_manager.event.from_user.id
+    offset: int = dialog_manager.dialog_data.get(OFFSET)
+    limit: int = dialog_manager.dialog_data.get(LIMIT)
+    id: int = dialog_manager.event.from_user.id
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
@@ -216,10 +218,10 @@ async def add_trainer_schedule(
 
     schedules: list[TrainerSchedule] = [
         set_trainer_schedule(
-            date,
-            dialog_manager.start_data[SCHEDULES][work_item],
-            dialog_manager.event.from_user.id
-        ) for date, work_item in data.items()
+            date=date_,
+            time=dialog_manager.start_data[SCHEDULES][work_item],
+            trainer_id=dialog_manager.event.from_user.id
+        ) for date_, work_item in data.items()
     ]
 
     session.add_all(schedules)
@@ -270,6 +272,7 @@ async def add_training(
 
     client: Client = await get_user(session, client_id, Client)
     client.workouts -= 1
+    dialog_manager.start_data[WORKOUTS] -= 1
 
     await session.commit()
 
@@ -299,13 +302,14 @@ async def cancel_training_db(
         if today <= date_:
             client: Client = schedule.client
             client.workouts += 1
+            dialog_manager.start_data[WORKOUTS] += 1
 
         await session.delete(schedule)
 
     await session.commit()
 
 
-async def get_trainings(
+async def get_trainings_for_date(
     dialog_manager: DialogManager,
     date: str,
     trainer_id: int = None
@@ -335,19 +339,19 @@ async def get_trainings(
 async def get_trainer_schedules(
     dialog_manager: DialogManager,
     trainer_id: int = None
-) -> list[dict]:
+) -> list[TrainerSchedule]:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    today = date.today()
+    today = date.today().isoformat()
 
     user_id = trainer_id or dialog_manager.event.from_user.id
 
     user: Trainer = await get_user(session, user_id, Trainer)
 
-    return [
-        day.get_data() for day in user.schedules if date.fromisoformat(day.date) > today
-    ]
+    schedules: list[TrainerSchedule] = [schedule for schedule in user.trainer_schedules if schedule.date > today]
+    
+    return schedules
 
 
 async def get_schedule(
@@ -370,3 +374,39 @@ async def get_schedule(
     result = await session.execute(stmt)
 
     return result.first()
+
+
+async def get_trainings(
+    dialog_manager: DialogManager,
+    trainer_id: None
+) -> list[Schedule]:
+    
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
+    today: str = date.today().isoformat()
+
+    trainer_id: int = trainer_id or dialog_manager.event.from_user.id
+
+    user: Trainer = await get_user(session, trainer_id, Trainer)
+
+    schedules: list[Schedule] = [schedule for schedule in user.schedules if schedule.date > today]
+
+    return schedules
+
+
+async def get_client_trainings(
+    dialog_manager: DialogManager
+) -> list[Schedule]:
+
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
+    user: Client = await get_user(
+        session,
+        dialog_manager.event.from_user.id,
+        Client
+    )
+
+    today: str = date.today().isoformat()
+    trainer_id: int = dialog_manager.start_data[TRAINER_ID]
+
+    return [schedule for schedule in user.trainings if schedule.trainer_id == trainer_id and schedule.date > today]

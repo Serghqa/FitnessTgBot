@@ -29,9 +29,9 @@ IS_CANCEL = 'is_cancel'
 IS_APPLY = 'is_apply'
 
 
-def format_schedule(data: str) -> str:
+def format_schedule(work: str) -> str:
 
-    items = sorted(map(int, data.split(',')))
+    items = sorted(map(int, work.split(',')))
 
     return f'{items[0]}-{items[-1]}'
 
@@ -67,7 +67,7 @@ async def get_data_radio(dialog_manager: DialogManager, **kwargs):
     marks = {1: '🟢', 2: '🔵', 3: '🟣'}
 
     data = [
-        (format_schedule(data), id, marks[id]) for id, data in \
+        (format_schedule(work), id, marks[id]) for id, work in \
             dialog_manager.start_data[SCHEDULES].items()
     ]
 

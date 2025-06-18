@@ -8,13 +8,15 @@ from .requests import (
     get_user,
     get_group,
     get_trainings,
+    get_trainings_for_date,
     get_work_days,
     update_working_day,
     add_trainer_schedule,
     get_trainer_schedules,
     cancel_training_db,
     cancel_trainer_schedule,
-    get_schedule
+    get_schedule,
+    get_client_trainings
 )
 
 
@@ -39,5 +41,7 @@ __all__ = [
     get_trainer_schedules,
     cancel_training_db,
     cancel_trainer_schedule,
-    get_schedule
+    get_schedule,
+    get_client_trainings,
+    get_trainings_for_date
 ]

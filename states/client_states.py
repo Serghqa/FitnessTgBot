@@ -7,3 +7,5 @@ class ClientState(StatesGroup):
     schedule = State()
     sign_training = State()
     sign_up = State()
+    my_sign_up = State()
+    cancel_training = State()

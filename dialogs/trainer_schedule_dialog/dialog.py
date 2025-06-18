@@ -28,9 +28,9 @@ from .handlers import (
     reset_calendar,
     process_result,
     process_start,
-    clear_selected_date,
     cancel_training,
-    cancel_work
+    cancel_work,
+    update_selected_dates
 )
 from .getters import (
     selection_getter,
@@ -125,7 +125,7 @@ trainer_schedule_dialog = Dialog(
             SwitchTo(
                 text=Const('Назад'),
                 id='canc_sel',
-                on_click=clear_selected_date,
+                on_click=update_selected_dates,
                 state=TrainerScheduleStates.schedule,
             ),
             Button(

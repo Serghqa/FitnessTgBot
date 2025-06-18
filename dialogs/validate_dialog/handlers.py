@@ -108,7 +108,6 @@ async def trainer_is_valid(
 
     data: dict = set_data_user(dialog_manager)
     await add_trainer(data[ID], data[NAME], dialog_manager)
-    #await add_client(dialog_manager, data[ID])  # для отладки
 
     await dialog_manager.start(
         data=data,

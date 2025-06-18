@@ -16,11 +16,11 @@ class Trainer(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String)
 
-    trainings: Mapped[list['Schedule']] = \
+    schedules: Mapped[list['Schedule']] = \
         relationship('Schedule', back_populates='trainer', lazy='joined')
     working_days: Mapped[list['WorkingDay']] = \
         relationship('WorkingDay', back_populates='trainer', lazy='joined')
-    schedules: Mapped[list['TrainerSchedule']] = \
+    trainer_schedules: Mapped[list['TrainerSchedule']] = \
         relationship('TrainerSchedule', back_populates='trainer', lazy='joined')
 
     def __repr__(self):
@@ -73,7 +73,7 @@ class Schedule(Base):
     time: Mapped[int] = mapped_column(Integer)
 
     client = relationship('Client', back_populates='trainings', lazy='joined')
-    trainer = relationship('Trainer', back_populates='trainings', lazy='joined')
+    trainer = relationship('Trainer', back_populates='schedules', lazy='joined')
 
     def __repr__(self):
 
@@ -130,7 +130,7 @@ class TrainerSchedule(Base):
 
     trainer = relationship(
         'Trainer',
-        back_populates='schedules',
+        back_populates='trainer_schedules',
         lazy='selectin'
     )
 

@@ -177,22 +177,22 @@ async def on_client(
 ):
 
     trainer_id: int = dialog_manager.event.from_user.id
-    user_data: dict[str, Any] = await get_data_user(dialog_manager, Client, trainer_id)
+    new_data_user: dict[str, Any] = await get_data_user(dialog_manager, Client, trainer_id)
 
-    data: dict[str, Any] = dialog_manager.dialog_data[GROUP][int(item_id)]
+    data_user: dict[str, Any] = dialog_manager.dialog_data[GROUP][int(item_id)]
     
-    if any(value != user_data.get(key, value) for key, value in data.items()):
+    if any(value != data_user.get(key, value) for key, value in new_data_user.items()):
         await callback.answer(
             text='Данные клиента были изменены.',
             show_alert=True,
         )
 
-    data.update(user_data)
-    data[WORKOUT] = 0
+    data_user.update(new_data_user)
+    data_user[WORKOUT] = 0
 
     await dialog_manager.start(
         state=ClientEditState.main,
-        data=data,
+        data=data_user,
         show_mode=ShowMode.EDIT
     )
 
