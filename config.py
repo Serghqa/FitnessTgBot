@@ -9,8 +9,16 @@ class TgBot:
 
 
 @dataclass
+class DbConfig:
+    NAME: str
+    PASSWORD: str
+    HOST: str
+
+
+@dataclass
 class Config:
     tg_bot: TgBot
+    data_base: DbConfig
 
 
 def load_config(path: str | None = None) -> Config:
@@ -20,5 +28,10 @@ def load_config(path: str | None = None) -> Config:
         tg_bot=TgBot(
             env('TOKEN'),
             env('IS_TRAINER')
+        ),
+        data_base=DbConfig(
+            env('NAME'),
+            env('PASSWORD'),
+            env('HOST')
         )
     )

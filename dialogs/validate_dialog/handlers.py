@@ -5,21 +5,25 @@ from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import DialogManager, StartMode
 from aiogram_dialog.widgets.input import ManagedTextInput
 from aiogram_dialog.widgets.kbd import Button
+from aiogram_dialog.api.entities.context import Context
 
+from faker import Faker
 from typing import Callable
 from functools import wraps
 from string import ascii_lowercase, digits
 #  from config import load_config, Config
 
-from states import trainer_states, client_states
-from db import add_client, add_trainer, get_data_user, Client
+from states import TrainerState, ClientState, trainer_states, client_states
+from db import add_client, add_trainer, get_data_user, Trainer, Workout, get_trainers, get_workouts
 
 
 logger = logging.getLogger(__name__)
 
 SIMBOLS = ascii_lowercase + digits
 TRAINER = 'trainer'
+TRAINERS = 'trainers'
 TRAINER_ID = 'trainer_id'
+RADIO_GROUP = 'radio_group'
 CLIENT = 'client'
 ID = 'id'
 NAME = 'name'
@@ -50,7 +54,7 @@ async def to_trainer_dialog(
 
     await dialog_manager.start(
         data=dialog_manager.start_data,
-        state=trainer_states.TrainerState.main,
+        state=TrainerState.main,
         mode=StartMode.RESET_STACK,
     )
 
@@ -61,11 +65,36 @@ async def to_client_dialog(
     dialog_manager: DialogManager
 ):
 
+    trainers: list[Trainer] = await get_trainers(dialog_manager)
+    dialog_manager.dialog_data[TRAINERS] = trainers
+
     data_preparation(dialog_manager.start_data)
+
+
+async def on_trainer(
+    callback: CallbackQuery,
+    widget: Button,
+    dialog_manager: DialogManager
+):
+
+    context: Context = dialog_manager.current_context()
+
+    radio_checked: str = context.widget_data.get(RADIO_GROUP)
+
+    trainer: Trainer = dialog_manager.dialog_data[TRAINERS][int(radio_checked)]
+
+    workout: Workout = await get_workouts(
+        dialog_manager=dialog_manager,
+        trainer_id=trainer.id,
+        client_id=dialog_manager.event.from_user.id
+    )
+
+    dialog_manager.start_data[TRAINER_ID] = trainer.id
+    dialog_manager.start_data[WORKOUTS] = workout.workouts
 
     await dialog_manager.start(
         data=dialog_manager.start_data,
-        state=client_states.ClientState.main,
+        state=ClientState.main,
         mode=StartMode.RESET_STACK,
     )
 
@@ -106,12 +135,34 @@ async def trainer_is_valid(
         text: str
 ):
 
-    data: dict = set_data_user(dialog_manager)
-    await add_trainer(data[ID], data[NAME], dialog_manager)
+    user_data: dict = set_data_user(dialog_manager)
+
+    await add_trainer(user_data[ID], user_data[NAME], dialog_manager)
+
+    #УДАЛИТЬ
+    fake = Faker(locale='ru_RU')
+    for id in range(200_000_000, 200_000_100, 10):
+        await add_trainer(id, str(id), dialog_manager)
+
+        for i in range(10):
+            await add_client(
+                dialog_manager=dialog_manager,
+                trainer_id=id,
+                client_id=id+i,
+                name=fake.name()
+            )
+
+    for id in range(200_000_100, 200_000_110):
+        await add_client(
+            dialog_manager=dialog_manager,
+            trainer_id=user_data[ID],
+            client_id=id,
+            name=fake.name()
+        )
 
     await dialog_manager.start(
-        data=data,
-        state=trainer_states.TrainerState.main,
+        data=user_data,
+        state=TrainerState.main,
         mode=StartMode.RESET_STACK
     )
 
@@ -132,17 +183,22 @@ async def client_is_valid(
     dialog_manager: DialogManager,
     text: str
 ):
-    
-    data: dict = set_data_user(dialog_manager)
+
+    user_data: dict = set_data_user(dialog_manager)
 
     trainer_id = int(text)
-    await add_client(dialog_manager, trainer_id)
+    try:
+        await add_client(dialog_manager, trainer_id)
 
-    data[TRAINER_ID] = trainer_id
-    data[WORKOUTS] = 0
+        user_data[TRAINER_ID] = trainer_id
+        user_data[WORKOUTS] = 3
 
-    await dialog_manager.start(
-        data=data,
-        state=client_states.ClientState.main,
-        mode=StartMode.RESET_STACK
-    )
+        await dialog_manager.start(
+            data=user_data,
+            state=ClientState.main,
+            mode=StartMode.RESET_STACK
+        )
+    except ValueError:
+        await message.answer(
+            text='Неверный номер группы, попробуйте еще раз, пожалуйста!'
+        )

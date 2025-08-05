@@ -56,12 +56,12 @@ async def get_multiselect_data(dialog_manager: DialogManager, **kwargs):
     widget: ManagedMultiselect = dialog_manager.find(SEL)
 
     items = {item: '🟢' for item in widget.get_checked()}
-    
+
     return {
         ROWS: [(i, i, items.get(str(i), '')) for i in range(24)]
     }
 
-    
+
 async def get_data_radio(dialog_manager: DialogManager, **kwargs):
 
     marks = {1: '🟢', 2: '🔵', 3: '🟣'}
@@ -80,7 +80,7 @@ async def get_current_schedule(dialog_manager: DialogManager, **kwargs):
 
     selected_date: dict = dialog_manager.dialog_data[SELECTED_DATE][DATE]
     clients: list = dialog_manager.dialog_data[SELECTED_DATE][CLIENTS]
-    
+
     rows = [(i, data[NAME], data[TIME]) for i, data in enumerate(clients)]
 
     is_cancel: bool = any(context.widget_data.get(SEL_D, []))

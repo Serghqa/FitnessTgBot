@@ -55,7 +55,7 @@ async def get_data_selected(dialog_manager: DialogManager, **kwargs):
     context: Context = dialog_manager.current_context()
 
     selected_date: str = dialog_manager.dialog_data[SELECTED_DATE]
-    times: list[int] = sorted(dialog_manager.dialog_data[SELECTED_DATES][selected_date])
+    times: list[int] = sorted(dialog_manager.dialog_data[SELECTED_DATES].get(selected_date, []))
     rows: list[tuple[int]] = [(i, t) for i, t in enumerate(times)]
     exist: bool = any(context.widget_data.get(SEL_D, []))
 

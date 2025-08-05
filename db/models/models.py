@@ -16,17 +16,29 @@ class Trainer(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String)
 
-    schedules: Mapped[list['Schedule']] = \
-        relationship('Schedule', back_populates='trainer', lazy='joined')
-    working_days: Mapped[list['WorkingDay']] = \
-        relationship('WorkingDay', back_populates='trainer', lazy='joined')
-    trainer_schedules: Mapped[list['TrainerSchedule']] = \
-        relationship('TrainerSchedule', back_populates='trainer', lazy='joined')
-
-    def __repr__(self):
-        return f'id={self.id}, name={self.name}'
+    clients: Mapped[list['Client']] = relationship(
+        back_populates='trainers',
+        secondary='relation_users',
+        uselist=True,
+        order_by='Client.id'
+    )
+    schedules: Mapped[list['Schedule']] = relationship(
+        'Schedule',
+        back_populates='trainer',
+    )
+    working_days: Mapped[list['WorkingDay']] = relationship(
+        'WorkingDay',
+        back_populates='trainer',
+        order_by='WorkingDay.item'
+    )
+    trainer_schedules: Mapped[list['TrainerSchedule']] = relationship(
+        'TrainerSchedule',
+        back_populates='trainer',
+        order_by='TrainerSchedule.date'
+    )
 
     def get_data(self) -> dict[str, Any]:
+
         return {
             'id': self.id,
             'name': self.name
@@ -39,23 +51,66 @@ class Client(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String)
-    workouts: Mapped[int] = mapped_column(Integer, default=0)
-    trainer_id: Mapped[int] = mapped_column(BigInteger)
 
-    trainings: Mapped[list['Schedule']] = \
-        relationship('Schedule', back_populates='client', lazy='joined')
-
-    def __repr__(self):
-
-        return f'id={self.id}, name={self.name}'
+    trainers: Mapped[list['Trainer']] = relationship(
+        back_populates='clients',
+        secondary='relation_users',
+        uselist=True,
+        order_by='Trainer.id'
+    )
+    workouts: Mapped[list['Workout']] = relationship(
+        'Workout',
+        back_populates='client'
+    )
+    schedules: Mapped[list['Schedule']] = relationship(
+        'Schedule',
+        back_populates='client'
+    )
 
     def get_data(self) -> dict[str, Any]:
 
         return {
             'id': self.id,
-            'name': self.name,
-            'workouts': self.workouts,
-            'trainer_id': self.trainer_id
+            'name': self.name
+        }
+
+
+class RelationUsers(Base):
+
+    __tablename__ = 'relation_users'
+
+    trainer_id: Mapped[int] = mapped_column(
+        ForeignKey('trainer.id'),
+        primary_key=True,
+    )
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey('client.id'),
+        primary_key=True,
+    )
+
+
+class Workout(Base):
+
+    __tablename__ = 'workout'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+    trainer_id: Mapped[int] = mapped_column(BigInteger)
+    workouts: Mapped[int] = mapped_column(Integer, default=0)
+    client_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('client.id'))
+
+    client: Mapped['Client'] = relationship(
+        'Client',
+        back_populates='workouts'
+    )
+
+    def get_data(self) -> dict[str, int]:
+
+        return {
+            'workouts': self.workouts
         }
 
 
@@ -63,23 +118,25 @@ class Schedule(Base):
 
     __tablename__ = 'schedule'
 
-    id: Mapped[int] = \
-        mapped_column(Integer, primary_key=True, autoincrement=True)
-    client_id: Mapped[int] = \
-        mapped_column(BigInteger, ForeignKey('client.id'))
-    trainer_id: Mapped[int] = \
-        mapped_column(BigInteger, ForeignKey('trainer.id'))
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+    client_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey('client.id')
+    )
+    trainer_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey('trainer.id')
+    )
     date: Mapped[str] = mapped_column(String)
     time: Mapped[int] = mapped_column(Integer)
 
-    client = relationship('Client', back_populates='trainings', lazy='joined')
-    trainer = relationship('Trainer', back_populates='schedules', lazy='joined')
+    client = relationship('Client', back_populates='schedules')
+    trainer = relationship('Trainer', back_populates='schedules')
 
-    def __repr__(self):
-
-        return f'Training trainer_id={self.trainer_id}, '\
-            f'client_id={self.client_id}'
-    
     def get_data(self) -> dict[str, Any]:
 
         return {
@@ -94,21 +151,22 @@ class WorkingDay(Base):
 
     __tablename__ = 'working_day'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
     item: Mapped[int] = mapped_column(Integer)
     work: Mapped[str] = mapped_column(String)
-    trainer_id: Mapped[int] =\
-        mapped_column(BigInteger, ForeignKey('trainer.id'))
-
-    trainer = relationship(
-        'Trainer',
-        back_populates='working_days',
-        lazy='selectin'
+    trainer_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey('trainer.id')
     )
 
-    def __repr__(self):
-
-        return f'Work hours: {self.work}'
+    trainer: Mapped['Trainer'] = relationship(
+        'Trainer',
+        back_populates='working_days'
+    )
 
     def get_data(self):
 
@@ -122,21 +180,22 @@ class TrainerSchedule(Base):
 
     __tablename__ = 'trainer_schedule'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
     date: Mapped[str] = mapped_column(String)
     time: Mapped[str] = mapped_column(String)
-    trainer_id: Mapped[int] =\
-        mapped_column(BigInteger, ForeignKey('trainer.id'))
+    trainer_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey('trainer.id')
+    )
 
     trainer = relationship(
         'Trainer',
-        back_populates='trainer_schedules',
-        lazy='selectin'
+        back_populates='trainer_schedules'
     )
-
-    def __repr__(self):
-
-        return f'Date: {self.date}'
 
     def get_data(self):
 

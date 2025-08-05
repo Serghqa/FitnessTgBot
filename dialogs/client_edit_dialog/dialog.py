@@ -1,6 +1,6 @@
-from aiogram_dialog import Dialog, Window, ShowMode
+from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
-from aiogram_dialog.widgets.kbd import Button, Row, Cancel, SwitchTo
+from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo
 from aiogram_dialog.widgets.input import TextInput
 
 from states import ClientEditState
@@ -11,7 +11,8 @@ from .handlers import (
     is_valid_type,
     successful_code,
     error_code,
-    back_group
+    back_group,
+    update_data_user
 )
 from .getters import get_data
 
@@ -24,6 +25,7 @@ client_edit_dialog = Dialog(
         SwitchTo(
             text=Const('Тренировки'),
             id='to_ed_wor',
+            on_click=update_data_user,
             state=ClientEditState.workout_edit,
         ),
         Button(
@@ -64,6 +66,7 @@ client_edit_dialog = Dialog(
         SwitchTo(
             text=Const('Назад'),
             id='to_main',
+            on_click=update_data_user,
             state=ClientEditState.main,
         ),
         state=ClientEditState.workout_edit,

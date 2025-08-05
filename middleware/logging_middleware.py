@@ -19,14 +19,14 @@ class LoggingMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: Dict[str, Any]
     ) -> Any:
-        
+
         dialog_manager: DialogManager = data.get('dialog_manager')
 
         result = await handler(event, data)
 
         if dialog_manager:
             context: Context = dialog_manager.current_context()
-        
+
             logger.info(
                 '<<Context>>\nstart_data=%s,\ndialog_data=%s,\nstate=%s,\nwidget_data=%s\n',
                 context.start_data,

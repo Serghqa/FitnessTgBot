@@ -10,7 +10,7 @@ from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.api.entities.context import Context
 
 from states import TrainerState, TrainerScheduleStates, ClientEditState
-from db import Client, WorkingDay, get_group, get_data_user, get_work_days
+from db import Client, Workout, WorkingDay, get_group, get_data_user, get_work_days, get_workouts
 
 
 logger = logging.getLogger(__name__)
@@ -54,15 +54,27 @@ async def get_client(
         await message.answer('Ввели не корректные данные')
 
     elif message.text.isdigit():
-        user: dict = await get_data_user(dialog_manager, Client, int(message.text))
+        user: dict = await get_data_user(
+            dialog_manager,
+            Client,
+            int(message.text)
+        )
 
         if user:
+            workout: Workout = await get_workouts(
+                dialog_manager,
+                dialog_manager.event.from_user.id,
+                int(message.text)
+            )
             user[WORKOUT] = 0
+            user[WORKOUTS] = workout.workouts
+
             await dialog_manager.start(
                 state=ClientEditState.main,
                 data=user,
                 show_mode=ShowMode.SEND
             )
+
         else:
             await message.answer('Нет такого клиента')
 
@@ -176,25 +188,40 @@ async def on_client(
         item_id: str
 ):
 
-    trainer_id: int = dialog_manager.event.from_user.id
-    new_data_user: dict[str, Any] = await get_data_user(dialog_manager, Client, trainer_id)
+    data_user: dict[str, Any] = \
+            dialog_manager.dialog_data[GROUP][int(item_id)]
 
-    data_user: dict[str, Any] = dialog_manager.dialog_data[GROUP][int(item_id)]
-    
-    if any(value != data_user.get(key, value) for key, value in new_data_user.items()):
+    workout: Workout | None = await get_workouts(
+        dialog_manager,
+        dialog_manager.event.from_user.id,
+        data_user[ID]
+    )
+
+    if not workout:
         await callback.answer(
-            text='Данные клиента были изменены.',
-            show_alert=True,
+            text='Данные клиента отсутствуют',
+            show_alert=True
+        )
+        await _set_frame_group(
+            dialog_manager,
+            0
         )
 
-    data_user.update(new_data_user)
-    data_user[WORKOUT] = 0
+    else:
+        if workout.workouts != data_user[WORKOUTS]:
+            await callback.answer(
+                text='Количество тренировок клиента было изменено.',
+                show_alert=True,
+            )
 
-    await dialog_manager.start(
-        state=ClientEditState.main,
-        data=data_user,
-        show_mode=ShowMode.EDIT
-    )
+        data_user[WORKOUTS] = workout.workouts
+        data_user[WORKOUT] = 0
+
+        await dialog_manager.start(
+            state=ClientEditState.main,
+            data=data_user,
+            show_mode=ShowMode.EDIT
+        )
 
 
 async def to_schedule_dialog(
@@ -213,7 +240,7 @@ async def to_schedule_dialog(
 
     data = {}
 
-    data[SCHEDULES] = {id: work for id, work in sorted(work_days_data.items())}
+    data[SCHEDULES] = work_days_data
     data[WIDGET_DATA] = {RADIO_WORK: widget_item}
 
     await dialog_manager.start(

@@ -31,7 +31,6 @@ async def command_start(
 
     user_data = await get_data_user(dialog_manager, Client)
     data[CLIENT] = user_data.get(ID) is not None
-    
     if not data[CLIENT]:
         user_data = await get_data_user(dialog_manager, Trainer)
         data[TRAINER] = user_data.get(TRAINER) is not None

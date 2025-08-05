@@ -32,13 +32,17 @@ async def main():
 
     logging.config.dictConfig(logging_config)
     logging.getLogger('aiogram.event').setLevel(logging.WARNING)
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
     logger = logging.getLogger(__name__)
 
     config: Config = load_config()
 
     engine: AsyncEngine = create_async_engine(
-        url='sqlite+aiosqlite:///./Fitness.db', echo=False
+        url=f'postgresql+psycopg://'
+        f'{config.data_base.NAME}:{config.data_base.PASSWORD}@'
+        f'{config.data_base.HOST}/fitness',
+        echo=False
     )
 
     await create_tables(engine=engine)
@@ -46,8 +50,7 @@ async def main():
     Session = async_sessionmaker(engine, expire_on_commit=False)
 
     bot = Bot(
-        #  token=config.tg_bot.TOKEN,
-        token='7631598893:AAEXvczkvLbJT5XDnPXtXoC5gCjSBnx9nlk',  # УБРАТЬ
+        token=config.tg_bot.TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     dp = Dispatcher()
@@ -67,4 +70,5 @@ async def main():
     logger.info('start polling')
 
 if __name__ == '__main__':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()) #  Убрать при деплое
     asyncio.run(main())

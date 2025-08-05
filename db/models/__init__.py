@@ -1,4 +1,4 @@
-from .models import Trainer, Client, Schedule, WorkingDay, TrainerSchedule, Base
+from .models import Trainer, Client, RelationUsers, Schedule, WorkingDay, TrainerSchedule, Workout, Base
 
 
 def set_trainer(id: int, name: str) -> Trainer:
@@ -6,9 +6,14 @@ def set_trainer(id: int, name: str) -> Trainer:
     return Trainer(id=id, name=name)
 
 
-def set_client(id: int, name: str, trainer_id: int) -> Client:
+def set_client(id: int, name: str) -> Client:
 
-    return Client(id=id, name=name, trainer_id=trainer_id)
+    return Client(id=id, name=name)
+
+
+def set_workout(trainer_id: int, workouts: int, client_id: int) -> Workout:
+
+    return Workout(trainer_id=trainer_id, workouts=workouts, client_id=client_id)
 
 
 def set_schedule(client_id: int, trainer_id: int, date: str, time: int) -> Schedule:

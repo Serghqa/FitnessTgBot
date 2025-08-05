@@ -1,4 +1,4 @@
-from .models import Base, Client, Trainer, Schedule, WorkingDay, TrainerSchedule
+from .models import Base, Client, Trainer, Schedule, WorkingDay, TrainerSchedule, Workout
 from .requests import (
     add_client,
     add_trainer,
@@ -7,8 +7,7 @@ from .requests import (
     update_workouts,
     get_user,
     get_group,
-    get_trainings,
-    get_trainings_for_date,
+    get_clients_training,
     get_work_days,
     update_working_day,
     add_trainer_schedule,
@@ -16,7 +15,10 @@ from .requests import (
     cancel_training_db,
     cancel_trainer_schedule,
     get_schedule,
-    get_client_trainings
+    get_client_trainings,
+    get_workouts,
+    get_schedules,
+    get_trainers
 )
 
 
@@ -25,6 +27,7 @@ __all__ = [
     Client,
     Trainer,
     Schedule,
+    Workout,
     WorkingDay,
     TrainerSchedule,
     add_client,
@@ -34,7 +37,6 @@ __all__ = [
     update_workouts,
     get_user,
     get_group,
-    get_trainings,
     get_work_days,
     update_working_day,
     add_trainer_schedule,
@@ -43,5 +45,8 @@ __all__ = [
     cancel_trainer_schedule,
     get_schedule,
     get_client_trainings,
-    get_trainings_for_date
+    get_clients_training,
+    get_workouts,
+    get_schedules,
+    get_trainers
 ]

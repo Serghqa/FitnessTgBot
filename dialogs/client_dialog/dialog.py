@@ -6,13 +6,17 @@ from aiogram import F
 
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
-from aiogram_dialog.widgets.kbd import SwitchTo, Column, Row, Multiselect, Button
-from aiogram_dialog.widgets.input import TextInput
+from aiogram_dialog.widgets.kbd import (
+    SwitchTo,
+    Column,
+    Row,
+    Multiselect,
+    Button
+)
 
 from .getters import get_data_radio, get_exist_data, get_data_selected
 
 from .handlers import (
-    send_message,
     set_calendar,
     on_date_selected,
     clear_data,
@@ -41,27 +45,12 @@ client_dialog = Dialog(
             text='Главное окно клиента',
         ),
         SwitchTo(
-            text=Const('Написать тренеру'),
-            id='mess_tr',
-            state=ClientState.message,
-        ),
-        SwitchTo(
             text=Const('Тренировки'),
             id='sign',
             on_click=set_calendar,
             state=ClientState.schedule,
         ),
         state=ClientState.main,
-    ),
-    Window(
-        Const(
-            text='Сообщение будет отправленно вашему тренеру',
-        ),
-        TextInput(
-            id='send_mess',
-            on_success=send_message,
-        ),
-        state=ClientState.message,
     ),
     Window(
         Const(

@@ -1,9 +1,11 @@
 from aiogram import F
 
 from aiogram_dialog import Dialog, Window
-from aiogram_dialog.widgets.text import Const
-from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo
+from aiogram_dialog.widgets.text import Const, Format
+from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo, Radio
 from aiogram_dialog.widgets.input import TextInput
+
+from operator import itemgetter
 
 from states import StartSG
 from .handlers import (
@@ -13,9 +15,10 @@ from .handlers import (
     is_client,
     trainer_is_valid,
     error_code,
-    client_is_valid
+    client_is_valid,
+    on_trainer
 )
-from .getters import get_data
+from .getters import get_data, get_radio_data
 
 
 CLIENT = 'client'
@@ -65,10 +68,11 @@ validate_dialog = Dialog(
             on_click=to_trainer_dialog,
             #when=TRAINER,
         ),
-        Button(
-            text=Const('В группу'),
+        SwitchTo(
+            text=Const('Выберите группу'),
             id='to_cl_dlg',
             on_click=to_client_dialog,
+            state=StartSG.group,
             #when=CLIENT,
         ),
         getter=get_data,
@@ -99,5 +103,31 @@ validate_dialog = Dialog(
             on_error=error_code,
         ),
         state=StartSG.client,
+    ),
+    Window(
+        Const(
+            text='Ваши группы'
+        ),
+        Radio(
+            Format(
+                text='☑️ {item[0]}'
+            ),
+            Format(
+                text='⬜ {item[0]}'
+            ),
+            id='radio_group',
+            item_id_getter=itemgetter(1),
+            items='radio'
+        ),
+        Button(
+            Const(
+                text='Перейти в выбранную группу',
+            ),
+            id='to_cl_dialog',
+            on_click=on_trainer,
+            when='is_checked',
+        ),
+        state=StartSG.group,
+        getter=get_radio_data,
     ),
 )
