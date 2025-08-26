@@ -1,20 +1,20 @@
 from aiogram_dialog import Dialog, Window
-from aiogram_dialog.widgets.text import Const, Format
-from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo
 from aiogram_dialog.widgets.input import TextInput
+from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo
+from aiogram_dialog.widgets.text import Const, Format
 
-from states import ClientEditState
+from .getters import get_data
 from .handlers import (
+    back_group,
+    error_code,
+    is_valid_type,
+    successful_code,
     workout_add,
     workout_apply,
     workout_sub,
-    is_valid_type,
-    successful_code,
-    error_code,
-    back_group,
-    update_data_user
+    update_data_user,
 )
-from .getters import get_data
+from states import ClientEditState
 
 
 client_edit_dialog = Dialog(

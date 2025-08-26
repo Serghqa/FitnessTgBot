@@ -1,10 +1,10 @@
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.state import State, StatesGroup
 
 
 class TrainerScheduleStates(StatesGroup):
+    confirmation = State()
+    edit_work = State()
     main = State()
+    selected_date = State()
     schedule = State()
     work = State()
-    edit_work = State()
-    selected_date = State()
-    confirmation = State()

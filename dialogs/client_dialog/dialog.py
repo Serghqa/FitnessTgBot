@@ -1,32 +1,33 @@
 import logging
 
-from operator import itemgetter
 
 from aiogram import F
 
 from aiogram_dialog import Dialog, Window
-from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import (
-    SwitchTo,
+    Button,
     Column,
-    Row,
     Multiselect,
-    Button
+    Row,
+    SwitchTo,
 )
+from aiogram_dialog.widgets.text import Const, Format
 
-from .getters import get_data_radio, get_exist_data, get_data_selected
+from operator import itemgetter
+
+from .getters import get_data_radio, get_data_selected, get_exist_data
 
 from .handlers import (
-    set_calendar,
-    on_date_selected,
-    clear_data,
-    exist_sign,
-    set_client_trainings,
-    on_date,
     cancel_training,
-    reset_widget,
+    clear_data,
     CustomCalendar,
-    CustomRadio
+    CustomRadio,
+    exist_sign,
+    on_date,
+    on_date_selected,
+    reset_widget,
+    set_calendar,
+    set_client_trainings,
 )
 
 from states import ClientState
@@ -36,7 +37,6 @@ logger = logging.getLogger(__name__)
 
 EXIST = 'exist'
 WORKOUTS = 'workouts'
-RADIO_ITEM = 'radio_item'
 
 
 client_dialog = Dialog(
@@ -115,11 +115,11 @@ client_dialog = Dialog(
     Window(
         Format(
             text='Вы записаны {selected_date} в {selected_time}:00',
-            when=F[EXIST]
+            when=F[EXIST],
         ),
         Format(
             text='Это время уже недоступно',
-            when=~F[EXIST]
+            when=~F[EXIST],
         ),
         SwitchTo(
             text=Const('Назад'),
@@ -148,7 +148,7 @@ client_dialog = Dialog(
     ),
     Window(
         Format(
-            text='Выбранная дата {selected_date}'
+            text='Выбранная дата {selected_date}',
         ),
         Column(
             Multiselect(
@@ -170,7 +170,7 @@ client_dialog = Dialog(
                 text=Const('❗Отменить запись(и)'),
                 id='canc_tr',
                 on_click=cancel_training,
-                when=F[EXIST]
+                when=F[EXIST],
             ),
         ),
         getter=get_data_selected,

@@ -1,13 +1,16 @@
 import asyncio
+import dialogs
 import logging
 import logging.config
-import dialogs
 
 from aiogram import Bot, Dispatcher, Router
+from aiogram.types import BotCommand
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from aiogram_dialog import setup_dialogs
+
+from logging_setting import logging_config
 
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -15,10 +18,25 @@ from sqlalchemy.ext.asyncio import (
     AsyncEngine
 )
 
-from logging_setting import logging_config
 from config import load_config, Config
-from middleware import DbSessionMiddleware, LoggingMiddleware
 from db import Base
+from middleware import DbSessionMiddleware, LoggingMiddleware
+
+
+async def set_bot_commands(bot: Bot):
+
+    commands = [
+        BotCommand(
+            command='/start',
+            description='Перезапустить бота',
+        ),
+        BotCommand(
+            command='/update',
+            description='Обновить',
+        )
+    ]
+
+    await bot.set_my_commands(commands)
 
 
 async def create_tables(engine: AsyncEngine):
@@ -39,10 +57,12 @@ async def main():
     config: Config = load_config()
 
     engine: AsyncEngine = create_async_engine(
-        url=f'postgresql+psycopg://'
-        f'{config.data_base.NAME}:{config.data_base.PASSWORD}@'
-        f'{config.data_base.HOST}/fitness',
-        echo=False
+        url=(
+            f'postgresql+psycopg://'
+            f'{config.data_base.NAME}:{config.data_base.PASSWORD}@'
+            f'{config.data_base.HOST}/fitness'
+        ),
+        echo=False,
     )
 
     await create_tables(engine=engine)
@@ -51,11 +71,11 @@ async def main():
 
     bot = Bot(
         token=config.tg_bot.TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher()
 
-    dp.update.middleware(DbSessionMiddleware(Session))
+    dp.update.middleware(DbSessionMiddleware(Session),)
 
     router: Router = dialogs.setup_all_dialogs(Router)
     router.callback_query.middleware(LoggingMiddleware())
@@ -65,6 +85,7 @@ async def main():
     setup_dialogs(dp)
 
     await bot.delete_webhook(drop_pending_updates=True)
+    await set_bot_commands(bot)
     await dp.start_polling(bot)
 
     logger.info('start polling')

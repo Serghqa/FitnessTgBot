@@ -1,32 +1,25 @@
 import logging
 
 from aiogram_dialog import DialogManager
-from aiogram_dialog.widgets.kbd.select import ManagedMultiselect
 from aiogram_dialog.api.entities import Context
+from aiogram_dialog.widgets.kbd.select import ManagedMultiselect
 
 
 logger = logging.getLogger(__name__)
 
-
-WORK = 'work'
+CLIENT_NAME = 'client_name'
+DATE = 'date'
+IS_APPLY = 'is_apply'
+IS_CANCEL = 'is_cancel'
+RADIO = 'radio'
+ROWS = 'rows'
+SEL = 'sel'
+SEL_D = 'sel_d'
 SELECTED_DATES = 'selected_dates'
 SELECTED_DATE = 'selected_date'
-SELECTED = 'selected'
-RADIO = 'radio'
-SEL = 'sel'
 SCHEDULES = 'schedules'
-ROWS = 'rows'
-DATE = 'date'
-DATA = 'data'
-START = 'start'
-STOP = 'stop'
-BREAKS = 'breaks'
-CLIENTS = 'clients'
 TIME = 'time'
-NAME = 'name'
-SEL_D = 'sel_d'
-IS_CANCEL = 'is_cancel'
-IS_APPLY = 'is_apply'
+TRAININGS = 'trainings'
 
 
 def format_schedule(work: str) -> str:
@@ -41,8 +34,8 @@ async def selection_getter(dialog_manager: DialogManager, **kwargs):
     data_radio: dict[str, list] = await get_data_radio(dialog_manager)
 
     is_apply: bool = any(
-        item for item in dialog_manager.dialog_data[SELECTED_DATES].values() \
-            if isinstance(item, int)
+        item for item in dialog_manager.dialog_data[SELECTED_DATES].values()
+        if isinstance(item, int)
     )
 
     return {
@@ -67,8 +60,8 @@ async def get_data_radio(dialog_manager: DialogManager, **kwargs):
     marks = {1: '🟢', 2: '🔵', 3: '🟣'}
 
     data = [
-        (format_schedule(work), id, marks[id]) for id, work in \
-            dialog_manager.start_data[SCHEDULES].items()
+        (format_schedule(work), id, marks[id]) for id, work in
+        dialog_manager.start_data[SCHEDULES].items()
     ]
 
     return {RADIO: data}
@@ -79,9 +72,11 @@ async def get_current_schedule(dialog_manager: DialogManager, **kwargs):
     context: Context = dialog_manager.current_context()
 
     selected_date: dict = dialog_manager.dialog_data[SELECTED_DATE][DATE]
-    clients: list = dialog_manager.dialog_data[SELECTED_DATE][CLIENTS]
+    trainings: list = dialog_manager.dialog_data[SELECTED_DATE][TRAININGS]
 
-    rows = [(i, data[NAME], data[TIME]) for i, data in enumerate(clients)]
+    rows = [
+        (i, data[CLIENT_NAME], data[TIME]) for i, data in enumerate(trainings)
+    ]
 
     is_cancel: bool = any(context.widget_data.get(SEL_D, []))
 

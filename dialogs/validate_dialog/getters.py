@@ -6,6 +6,7 @@ from aiogram_dialog.api.entities.context import Context
 from db import Trainer
 
 
+IS_CHECKED = 'is_checked'
 RADIO = 'radio'
 RADIO_GROUP = 'radio_group'
 TRAINERS = 'trainers'
@@ -28,6 +29,6 @@ async def get_radio_data(dialog_manager: DialogManager, **kwargs):
     trainers: list[Trainer] = dialog_manager.dialog_data[TRAINERS]
 
     return {
-        'is_checked': is_checked,
+        IS_CHECKED: is_checked,
         RADIO: [(trainer.name, i) for i, trainer in enumerate(trainers)]
     }

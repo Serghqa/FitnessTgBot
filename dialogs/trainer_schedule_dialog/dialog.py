@@ -1,47 +1,46 @@
-from operator import itemgetter
-
 from aiogram import F
 
 from aiogram_dialog import Dialog, Window
-from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import (
-    Multiselect,
-    SwitchTo,
     Button,
-    Radio,
     Column,
-    Row
+    Multiselect,
+    Radio,
+    Row,
+    SwitchTo,
 )
+from aiogram_dialog.widgets.text import Const, Format
 
-from states import TrainerScheduleStates
+from operator import itemgetter
+
+from .getters import (
+    get_current_schedule,
+    get_data_radio,
+    get_multiselect_data,
+    selection_getter,
+)
 from .handlers import (
+    apply_selected,
+    apply_work,
+    cancel_training,
+    cancel_work,
     CustomCalendar,
     CustomMultiselect,
     on_date_selected,
-    set_radio_work,
-    set_radio_calendar,
-    reset_checked,
     process_selection,
-    apply_selected,
-    apply_work,
-    set_checked,
-    reset_calendar,
-    process_result,
     process_start,
-    cancel_training,
-    cancel_work,
-    update_selected_dates
+    process_result,
+    reset_calendar,
+    reset_checked,
+    set_radio_calendar,
+    set_checked,
+    set_radio_work,
+    revoke,
 )
-from .getters import (
-    selection_getter,
-    get_multiselect_data,
-    get_data_radio,
-    get_current_schedule
-)
+from states import TrainerScheduleStates
 
-
-IS_CANCEL = 'is_cancel'
 IS_APPLY = 'is_apply'
+IS_CANCEL = 'is_cancel'
 
 
 RADIO = Radio(
@@ -61,7 +60,7 @@ RADIO = Radio(
 trainer_schedule_dialog = Dialog(
     Window(
         Const(
-            text='Главное окно расписания'
+            text='Главное окно расписания',
         ),
         SwitchTo(
             Const('Редактор смены'),
@@ -73,7 +72,7 @@ trainer_schedule_dialog = Dialog(
             Const('Редактор расписания'),
             id='to_cal',
             on_click=set_radio_calendar,
-            state=TrainerScheduleStates.schedule
+            state=TrainerScheduleStates.schedule,
         ),
         Button(
             text=Const('Назад'),
@@ -84,7 +83,7 @@ trainer_schedule_dialog = Dialog(
     ),
     Window(
         Const(
-            text='Календарь'
+            text='Календарь',
         ),
         CustomCalendar(
             id='cal',
@@ -110,7 +109,7 @@ trainer_schedule_dialog = Dialog(
     ),
     Window(
         Format(
-            text='Выбранная дата {selected_date}'
+            text='Выбранная дата {selected_date}',
         ),
         Column(
             Multiselect(
@@ -125,7 +124,7 @@ trainer_schedule_dialog = Dialog(
             SwitchTo(
                 text=Const('Назад'),
                 id='canc_sel',
-                on_click=update_selected_dates,
+                on_click=revoke,
                 state=TrainerScheduleStates.schedule,
             ),
             Button(

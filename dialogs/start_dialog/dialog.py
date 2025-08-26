@@ -1,44 +1,74 @@
 import logging
 
 from aiogram import Router, F
-from aiogram.types import Message
 from aiogram.filters import CommandStart
+from aiogram.types import Message
+
 from aiogram_dialog import (
     DialogManager,
-    StartMode
+    StartMode,
 )
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db import Client, get_user, Trainer
+from schemas import ClientSchema, TrainerSchema
 from states import StartSG
-from db import Client, Trainer, get_data_user
 
 
 logger = logging.getLogger(__name__)
 
 start_router = Router()
 
-CLIENT = 'client'
-TRAINER = 'trainer'
-ID = 'id'
+SESSION = 'session'
 
 
 @start_router.message(F.text, CommandStart())
 async def command_start(
         message: Message,
-        dialog_manager: DialogManager,
+        dialog_manager: DialogManager
 ):
 
-    data = {TRAINER: False, CLIENT: False}
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    user_data = await get_data_user(dialog_manager, Client)
-    data[CLIENT] = user_data.get(ID) is not None
-    if not data[CLIENT]:
-        user_data = await get_data_user(dialog_manager, Trainer)
-        data[TRAINER] = user_data.get(TRAINER) is not None
+    user_data = {}
 
-    data.update(user_data)
+    user_id: int = dialog_manager.event.from_user.id
+
+    client: Client = await get_user(
+        session=session,
+        user_id=user_id,
+        model=Client,
+    )
+    trainer: Trainer = await get_user(
+        session=session,
+        user_id=user_id,
+        model=Trainer,
+    )
+
+    for user in (client, trainer):
+        if user:
+            if isinstance(user, Client):
+                user_data.update(
+                    ClientSchema(**user.get_data()).model_dump(),
+                )
+            if isinstance(user, Trainer):
+                user_data.update(
+                    TrainerSchema(**user.get_data()).model_dump(),
+                )
 
     await dialog_manager.start(
-        data=data,
+        data=user_data,
         state=StartSG.main,
-        mode=StartMode.RESET_STACK
+        mode=StartMode.RESET_STACK,
     )
+
+
+@start_router.message(F.text == '/update')
+async def update_window(
+    message: Message,
+    dialog_manager: DialogManager
+):
+
+    if dialog_manager.has_context():
+        await dialog_manager.update(dialog_manager.dialog_data)

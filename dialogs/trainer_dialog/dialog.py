@@ -1,33 +1,33 @@
-from operator import itemgetter
-
 from aiogram_dialog import Dialog, Window
-from aiogram_dialog.widgets.text import Format, Const
 from aiogram_dialog.widgets.kbd import (
     Button,
-    Select,
     Group,
     Row,
     Radio,
-    SwitchTo
+    Select,
+    SwitchTo,
 )
 from aiogram_dialog.widgets.input import MessageInput
+from aiogram_dialog.widgets.text import Const, Format
 from aiogram.enums import ContentType
 
+from operator import itemgetter
+
 from states import TrainerState
+from .getters import get_data, get_data_group, message_data
 from .handlers import (
-    set_frame,
-    to_main_window,
-    on_client,
-    set_radio_message,
-    send_message,
-    next_page,
     back_page,
     get_client,
-    to_schedule_dialog,
+    next_page,
+    on_client,
+    process_result,
     render_group,
-    process_result
+    send_message,
+    set_frame,
+    set_radio_message,
+    to_main_window,
+    to_schedule_dialog,
 )
-from .getters import get_data, get_data_group, message_data
 
 
 MAIN_MENU = SwitchTo(
@@ -113,10 +113,10 @@ trainer_dialog = Dialog(
                 ),
                 Radio(
                     Format(
-                        text='☑️ {item[0]}'
+                        text='☑️ {item[0]}',
                     ),
                     Format(
-                        text='⬜ {item[0]}'
+                        text='⬜ {item[0]}',
                     ),
                     id='radio_pag',
                     item_id_getter=itemgetter(1),

@@ -1,29 +1,28 @@
-from aiogram_dialog import DialogManager
 from aiogram.types import CallbackQuery
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from aiogram_dialog import DialogManager
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from datetime import date
 
-from random import choice
-
 from db.models import (
-    set_trainer,
-    set_client,
-    set_work_day,
-    set_workout,
-    set_trainer_schedule,
-    set_schedule,
-    Trainer,
     Client,
-    RelationUsers,
+    Schedule,
+    set_client,
+    set_schedule,
+    set_trainer,
+    set_trainer_schedule,
+    set_workout,
+    set_work_day,
+    Trainer,
+    TrainerSchedule,
     Workout,
     WorkingDay,
-    TrainerSchedule,
-    Schedule
 )
+from schemas import ScheduleSchema
 
 
 OFFSET = 'offset'
@@ -43,18 +42,40 @@ async def get_user(
     session: AsyncSession,
     user_id: int,
     model: Client | Trainer
-) -> Trainer | Client:
+) -> Trainer | Client | None:
 
     user = await session.get(model, user_id)
 
     return user
 
 
+async def get_client_db(
+    dialog_manager: DialogManager,
+    client_id: int,
+    trainer_id: int
+) -> Client | None:
+
+    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
+    stmt = (
+        select(Client, Trainer)
+        .where(
+            Client.id == client_id,
+            Trainer.id == trainer_id,
+        )
+        .options(selectinload(Client.workouts))
+    )
+
+    result = await session.execute(stmt)
+
+    return result.scalar_one_or_none()
+
+
 async def add_trainer(
     id: int,
     name: str,
-    dialog_manager: DialogManager
-) -> None:
+    dialog_manager: DialogManager,
+) -> Trainer:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
@@ -65,37 +86,39 @@ async def add_trainer(
             set_work_day(
                 item=item,
                 work=','.join(map(str, range(9, 18+item))),
-                trainer_id=id
+                trainer_id=id,
             )
         )
 
     session.add(trainer)
     await session.commit()
 
+    return trainer
+
 
 async def add_client(
     dialog_manager: DialogManager,
     trainer_id: int,
-    client_id: int | None = None,
-    name: str = 'No_name'
+    client_id: int,
+    name: str,
 ) -> Client:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    trainer: Trainer = await get_user(session, trainer_id, Trainer)
+    trainer: Trainer = await get_user(
+        session=session,
+        user_id=trainer_id,
+        model=Trainer,
+    )
 
     if trainer is None:
         raise ValueError
 
-    client_id: int = client_id or dialog_manager.event.from_user.id
-    name: str = name
-    #name: str = dialog_manager.event.from_user.full_name or name
-
     client: Client = set_client(id=client_id, name=name)
     workout: Workout = set_workout(
         trainer_id=trainer.id,
-        workouts=3,
-        client_id=client_id
+        workouts=0,
+        client_id=client_id,
     )
     client.workouts.append(workout)
     client.trainers.append(trainer)
@@ -103,6 +126,8 @@ async def add_client(
     session.add(client)
 
     await session.commit()
+
+    return client
 
 
 async def update_workouts(
@@ -119,7 +144,7 @@ async def update_workouts(
     workout: Workout = await get_workouts(
         dialog_manager=dialog_manager,
         trainer_id=trainer_id,
-        client_id=client_id
+        client_id=client_id,
     )
 
     if workout.workouts == workouts:
@@ -139,26 +164,6 @@ async def update_workouts(
 
     dialog_manager.start_data[WORKOUTS] = workout.workouts
     dialog_manager.start_data[WORKOUT] = 0
-
-
-async def get_data_user(
-    dialog_manager: DialogManager,
-    model: Client | Trainer,
-    id: int | None = None
-) -> dict:
-
-    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
-
-    id = id or dialog_manager.event.from_user.id
-
-    data = {}
-
-    user: Trainer | Client = await get_user(session, id, model)
-
-    if user:
-        data.update(user.get_data())
-
-    return data
 
 
 async def get_group(
@@ -273,54 +278,21 @@ async def add_trainer_schedule(
 ):
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
+
     trainer: Trainer = await get_user(
-        session,
-        dialog_manager.event.from_user.id,
-        Trainer
+        session=session,
+        user_id=dialog_manager.event.from_user.id,
+        model=Trainer,
     )
-
-    ####Удалить####
-    stmt = (
-        select(Client)
-        .join(RelationUsers)
-        .where(RelationUsers.trainer_id == dialog_manager.event.from_user.id)
-    )
-
-    result = await session.execute(stmt)
-    clients: list[Client] = result.scalars().all()
-    ######Удалить########
-
 
     for date_, work_item in data.items():
         trainer_schedule: TrainerSchedule = set_trainer_schedule(
             date=date_,
             time=dialog_manager.start_data[SCHEDULES][work_item],
-            trainer_id=trainer.id
+            trainer_id=trainer.id,
         )
         trainer_schedule.trainer = trainer
         session.add(trainer_schedule)
-
-        ######Удалить#######
-        time = list(map(int, dialog_manager.start_data[SCHEDULES][work_item].split(',')))
-        for t in time:
-            if t % 2:
-                continue
-            client: Client = choice(clients)
-            schedule: Schedule = set_schedule(
-                client_id=client.id,
-                trainer_id=trainer.id,
-                date=date_,
-                time=t
-            )
-            session.add(schedule)
-            stmt = (
-                select(Workout)
-                .where(Workout.client_id == client.id)
-            )
-            result = await session.execute(stmt)
-            workout: Workout = result.scalar()
-            workout.workouts -= 1
-        #####Удалить#######
 
     await session.commit()
 
@@ -342,12 +314,14 @@ async def cancel_trainer_schedule(
         )
     )
 
-    res = await session.execute(stmt)
-    trainer_schedule: TrainerSchedule = res.scalar()
+    result = await session.execute(stmt)
 
-    await session.delete(trainer_schedule)
+    if result:
+        trainer_schedule: TrainerSchedule = result.scalar()
 
-    await session.commit()
+        await session.delete(trainer_schedule)
+
+        await session.commit()
 
 
 async def add_training(
@@ -364,7 +338,7 @@ async def add_training(
         client_id=client_id,
         trainer_id=trainer_id,
         date=date_,
-        time=time_
+        time=time_,
     )
 
     stmt = (
@@ -423,7 +397,7 @@ async def cancel_training_db(
                 dialog_manager.start_data[WORKOUTS] = workout.workouts
                 break
 
-        for schedule in client.schedules:  # scheduke
+        for schedule in client.schedules:  # Schedule
             if (schedule.trainer_id == trainer_id
                 and schedule.date == date_
                     and schedule.time == time_):
@@ -457,10 +431,16 @@ async def get_clients_training(
 
     data_trainings = []
     if result:
-        for client, schedule in result.all():
-            data: dict = schedule.get_data()
-            data.update({NAME: client.name})
-            data_trainings.append(data)
+        for client, schedule in result.all():  # Client, Schedule
+            schedule_schema: ScheduleSchema = ScheduleSchema(
+                client_name=client.name,
+                client_id=client.id,
+                trainer_id=schedule.trainer_id,
+                date=schedule.date,
+                time=schedule.time,
+            )
+
+            data_trainings.append(schedule_schema.model_dump())
 
     return data_trainings
 
@@ -559,18 +539,10 @@ async def get_client_trainings(
 
 
 async def get_trainers(
-    dialog_manager: DialogManager
-) -> list[Trainer]:
+    dialog_manager: DialogManager,
+) -> list[Trainer] | None:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
-
-    ####### Удалить#####
-    trainer: Trainer = set_trainer(123123123, 'dfdfg')
-    client: Client = await get_user(session, dialog_manager.event.from_user.id, Client)
-    trainer.clients.append(client)
-    session.add(trainer)
-    await session.commit()
-    ###### Удалить########
 
     client_id: int = dialog_manager.event.from_user.id
 
@@ -580,7 +552,7 @@ async def get_trainers(
         .options(selectinload(Client.trainers))
     )
 
-    result = await session.execute(stmt)
+    result: Client | None = await session.scalar(stmt)
 
-    if result:
-        return result.scalar().trainers
+    if result is not None:
+        return result.trainers

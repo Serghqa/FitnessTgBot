@@ -1,24 +1,30 @@
 import logging
 
+from aiogram.types import CallbackQuery, Message
+
+from aiogram_dialog import Data, DialogManager, ShowMode
+from aiogram_dialog.api.entities.context import Context
+from aiogram_dialog.widgets.input import MessageInput
+from aiogram_dialog.widgets.kbd import Button, ManagedRadio, Select, SwitchTo
+
 from typing import Any
 
-from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import DialogManager, ShowMode, Data
-from aiogram_dialog.widgets.kbd import Button, Select, ManagedRadio, SwitchTo
-from aiogram_dialog.widgets.kbd.select import ManagedRadio
-from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.api.entities.context import Context
-
-from states import TrainerState, TrainerScheduleStates, ClientEditState
-from db import Client, Workout, WorkingDay, get_group, get_data_user, get_work_days, get_workouts
+from db import (
+    Client,
+    get_client_db,
+    get_group,
+    get_work_days,
+    get_workouts,
+    WorkingDay,
+    Workout,
+)
+from schemas import ClientSchema, WorkDaySchema
+from states import ClientEditState, TrainerState, TrainerScheduleStates
 
 
 logger = logging.getLogger(__name__)
 
-
 GROUP = 'group'
-CLIENT = 'client'
-ID = 'id'
 WORKOUT = 'workout'
 WORKOUTS = 'workouts'
 OFFSET = 'offset'
@@ -26,8 +32,6 @@ LIMIT = 'limit'
 RADIO_MESS = 'radio_mess'
 RADIO_GROUP = 'radio_pag'
 RADIO_WORK = 'radio_work'
-SEND_ALL = 'send_all'
-WORK_DEFAULT = 'work_default'
 SCHEDULES = 'schedules'
 WIDGET_DATA = 'widget_data'
 
@@ -54,25 +58,22 @@ async def get_client(
         await message.answer('Ввели не корректные данные')
 
     elif message.text.isdigit():
-        user: dict = await get_data_user(
-            dialog_manager,
-            Client,
-            int(message.text)
+
+        client_db: Client | None = await get_client_db(
+            dialog_manager=dialog_manager,
+            client_id=int(message.text),
+            trainer_id=dialog_manager.event.from_user.id,
         )
 
-        if user:
-            workout: Workout = await get_workouts(
-                dialog_manager,
-                dialog_manager.event.from_user.id,
-                int(message.text)
-            )
-            user[WORKOUT] = 0
-            user[WORKOUTS] = workout.workouts
+        if client_db is not None:
+            user_data: dict = client_db.get_data()
+            user_data[WORKOUT] = 0
+            user_data[WORKOUTS] = client_db.workouts
 
             await dialog_manager.start(
                 state=ClientEditState.main,
-                data=user,
-                show_mode=ShowMode.SEND
+                data=user_data,
+                show_mode=ShowMode.SEND,
             )
 
         else:
@@ -95,11 +96,17 @@ async def _set_frame_group(
     if dialog_manager.dialog_data[OFFSET] < 0:
         dialog_manager.dialog_data[OFFSET] = 0
 
-    group: list[dict] = await get_group(dialog_manager, all)
+    group: list[dict] = await get_group(
+        dialog_manager=dialog_manager,
+        all=all,
+    )
 
     if not group and dialog_manager.dialog_data[OFFSET] > 0:
         dialog_manager.dialog_data[OFFSET] = 0
-        group: list[dict] = await get_group(dialog_manager, all)
+        group: list[dict] = await get_group(
+            dialog_manager=dialog_manager,
+            all=all,
+        )
 
     dialog_manager.dialog_data[GROUP] = group
 
@@ -151,7 +158,7 @@ async def next_page(
 
     await _set_frame_group(
         dialog_manager,
-        dialog_manager.dialog_data[LIMIT]
+        dialog_manager.dialog_data[LIMIT],
     )
 
 
@@ -163,7 +170,7 @@ async def back_page(
 
     await _set_frame_group(
         dialog_manager,
-        -(dialog_manager.dialog_data[LIMIT])
+        -(dialog_manager.dialog_data[LIMIT]),
     )
 
 
@@ -177,7 +184,7 @@ async def to_main_window(
 
     await dialog_manager.switch_to(
         state=TrainerState.main,
-        show_mode=ShowMode.EDIT
+        show_mode=ShowMode.EDIT,
     )
 
 
@@ -188,40 +195,28 @@ async def on_client(
         item_id: str
 ):
 
-    data_user: dict[str, Any] = \
-            dialog_manager.dialog_data[GROUP][int(item_id)]
+    data_client: dict = dialog_manager.dialog_data[GROUP][int(item_id)]
 
-    workout: Workout | None = await get_workouts(
-        dialog_manager,
-        dialog_manager.event.from_user.id,
-        data_user[ID]
+    client: ClientSchema = ClientSchema(**data_client)
+
+    workout: Workout = await get_workouts(
+        dialog_manager=dialog_manager,
+        trainer_id=dialog_manager.event.from_user.id,
+        client_id=client.id,
     )
 
-    if not workout:
+    if workout.workouts != client.workouts:
         await callback.answer(
-            text='Данные клиента отсутствуют',
-            show_alert=True
+            text='Количество тренировок клиента было изменено.',
+            show_alert=True,
         )
-        await _set_frame_group(
-            dialog_manager,
-            0
-        )
-
-    else:
-        if workout.workouts != data_user[WORKOUTS]:
-            await callback.answer(
-                text='Количество тренировок клиента было изменено.',
-                show_alert=True,
-            )
-
-        data_user[WORKOUTS] = workout.workouts
-        data_user[WORKOUT] = 0
-
-        await dialog_manager.start(
-            state=ClientEditState.main,
-            data=data_user,
-            show_mode=ShowMode.EDIT
-        )
+    data_client[WORKOUTS] = workout.workouts
+    data_client[WORKOUT] = 0
+    await dialog_manager.start(
+        state=ClientEditState.main,
+        data=data_client,
+        show_mode=ShowMode.EDIT,
+    )
 
 
 async def to_schedule_dialog(
@@ -234,19 +229,21 @@ async def to_schedule_dialog(
     work_days: list[WorkingDay] = \
         await get_work_days(dialog_manager)
 
-    work_days_data: dict[int, str] = {
-        day.item: day.work for day in work_days
-    }
+    data = {SCHEDULES: {}}
 
-    data = {}
+    for work_day in work_days:
+        valid_day: WorkDaySchema = WorkDaySchema(**work_day.get_data())
+        item: int = valid_day.item
+        work: str = valid_day.work
 
-    data[SCHEDULES] = work_days_data
+        data[SCHEDULES][item] = work
+
     data[WIDGET_DATA] = {RADIO_WORK: widget_item}
 
     await dialog_manager.start(
         data=data,
         state=TrainerScheduleStates.main,
-        show_mode=ShowMode.EDIT
+        show_mode=ShowMode.EDIT,
     )
 
 

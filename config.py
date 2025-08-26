@@ -27,11 +27,11 @@ def load_config(path: str | None = None) -> Config:
     return Config(
         tg_bot=TgBot(
             env('TOKEN'),
-            env('IS_TRAINER')
+            env('IS_TRAINER'),
         ),
         data_base=DbConfig(
             env('NAME'),
             env('PASSWORD'),
-            env('HOST')
-        )
+            env('HOST'),
+        ),
     )

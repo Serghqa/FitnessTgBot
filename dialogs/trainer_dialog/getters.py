@@ -5,7 +5,6 @@ from aiogram_dialog import DialogManager
 
 logger = logging.getLogger(__name__)
 
-
 NAME = 'name'
 WORKOUTS = 'workouts'
 GROUP = 'group'

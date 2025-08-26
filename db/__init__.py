@@ -3,7 +3,6 @@ from .requests import (
     add_client,
     add_trainer,
     add_training,
-    get_data_user,
     update_workouts,
     get_user,
     get_group,
@@ -18,7 +17,8 @@ from .requests import (
     get_client_trainings,
     get_workouts,
     get_schedules,
-    get_trainers
+    get_trainers,
+    get_client_db,
 )
 
 
@@ -33,7 +33,6 @@ __all__ = [
     add_client,
     add_trainer,
     add_training,
-    get_data_user,
     update_workouts,
     get_user,
     get_group,
@@ -48,5 +47,6 @@ __all__ = [
     get_clients_training,
     get_workouts,
     get_schedules,
-    get_trainers
+    get_trainers,
+    get_client_db,
 ]

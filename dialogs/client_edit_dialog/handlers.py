@@ -1,20 +1,21 @@
 import logging
-import asyncio
 
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import DialogManager, ShowMode
-from aiogram_dialog.widgets.kbd import Button, SwitchTo
-from aiogram_dialog.widgets.input import ManagedTextInput
 
-from db import update_workouts, get_workouts, Workout
+from aiogram_dialog import DialogManager, ShowMode
+from aiogram_dialog.widgets.input import ManagedTextInput
+from aiogram_dialog.widgets.kbd import Button, SwitchTo
+
+from db import get_workouts, update_workouts, Workout
+from schemas import ClientSchema
+from send_message import send_message
 
 
 logger = logging.getLogger(__name__)
 
-
+ID = 'id'
 WORKOUT = 'workout'
 WORKOUTS = 'workouts'
-ID = 'id'
 
 
 async def workout_add(
@@ -50,6 +51,19 @@ async def workout_apply(
 
     await update_workouts(dialog_manager, callback)
 
+    user_id: int = dialog_manager.start_data.get(ID)
+    workouts: int = dialog_manager.start_data.get(WORKOUTS)
+    text = (
+        f'Количество тренировок было изменено, '
+        f'теперь у вас {workouts}'
+    )
+
+    await send_message(
+        dialog_manager=dialog_manager,
+        user_id=user_id,
+        text=text,
+    )
+
 
 def is_valid_type(code: str):
 
@@ -73,10 +87,16 @@ async def successful_code(
 ):
 
     if text.startswith('-'):
-        dialog_manager.start_data[WORKOUT] -= int(text[1:])
+        workout = dialog_manager.start_data[WORKOUT] - int(text[1:])
+        if (dialog_manager.start_data[WORKOUTS] + workout) < 0:
+            workout = abs(
+                dialog_manager.start_data[WORKOUTS] + workout
+            ) + workout
 
     else:
-        dialog_manager.start_data[WORKOUT] += int(text)
+        workout = dialog_manager.start_data[WORKOUT] + int(text)
+
+    dialog_manager.start_data[WORKOUT] = workout
 
 
 async def error_code(
@@ -108,16 +128,17 @@ async def update_data_user(
 ):
 
     data_user: dict = dialog_manager.start_data
+    client: ClientSchema = ClientSchema(**data_user)
 
     workout: Workout = await get_workouts(
-        dialog_manager,
-        dialog_manager.event.from_user.id,
-        data_user[ID]
+        dialog_manager=dialog_manager,
+        trainer_id=dialog_manager.event.from_user.id,
+        client_id=client.id,
     )
 
-    if workout.workouts != data_user[WORKOUTS]:
+    if workout.workouts != client.workouts:
         await callback.answer(
             text='Данные клиента были обновленны',
-            show_alert=True
+            show_alert=True,
         )
         data_user[WORKOUTS] = workout.workouts

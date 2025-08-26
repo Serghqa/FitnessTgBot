@@ -1,5 +1,5 @@
-from .session import DbSessionMiddleware
 from .logging_middleware import LoggingMiddleware
+from .session import DbSessionMiddleware
 
 
-__all__ = [DbSessionMiddleware, LoggingMiddleware]
+__all__ = [LoggingMiddleware, DbSessionMiddleware]

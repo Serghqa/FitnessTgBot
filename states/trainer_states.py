@@ -1,8 +1,8 @@
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.state import State, StatesGroup
 
 
 class TrainerState(StatesGroup):
-    main = State()
+    client = State()
     group = State()
     message = State()
-    client = State()
+    main = State()

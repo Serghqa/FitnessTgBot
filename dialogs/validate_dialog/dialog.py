@@ -1,13 +1,14 @@
 from aiogram import F
 
 from aiogram_dialog import Dialog, Window
-from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo, Radio
 from aiogram_dialog.widgets.input import TextInput
+from aiogram_dialog.widgets.text import Const, Format
 
 from operator import itemgetter
 
 from states import StartSG
+from .getters import get_data, get_radio_data
 from .handlers import (
     to_trainer_dialog,
     to_client_dialog,
@@ -16,13 +17,12 @@ from .handlers import (
     trainer_is_valid,
     error_code,
     client_is_valid,
-    on_trainer
+    on_trainer,
 )
-from .getters import get_data, get_radio_data
 
 
-CLIENT = 'client'
-TRAINER = 'trainer'
+CLIENT = 'is_client'
+TRAINER = 'is_trainer'
 
 
 MAIN_MENU = SwitchTo(
@@ -43,37 +43,41 @@ validate_dialog = Dialog(
         ),
         Const(
             text='Привет тренер',
-            when=TRAINER,
+            when=F[TRAINER] & ~F[CLIENT],
         ),
         Const(
             text='Привет клиент',
-            when=CLIENT,
+            when=F[CLIENT] & ~F[TRAINER],
+        ),
+        Const(
+            text='Привет',
+            when=F[TRAINER] & F[CLIENT],
         ),
         Row(
             SwitchTo(
                 text=Const('Тренер'),
                 id='tr',
                 state=StartSG.trainer,
+                when=~F[TRAINER],
             ),
             SwitchTo(
                 text=Const('Клиент'),
                 id='cl',
                 state=StartSG.client,
+                when=~F[CLIENT],
             ),
-            #when=~F[TRAINER] & ~F[CLIENT],
         ),
         Button(
             text=Const('В тренерскую'),
             id='to_tr_dlg',
             on_click=to_trainer_dialog,
-            #when=TRAINER,
+            when=TRAINER,
         ),
-        SwitchTo(
+        Button(
             text=Const('Выберите группу'),
             id='to_cl_dlg',
             on_click=to_client_dialog,
-            state=StartSG.group,
-            #when=CLIENT,
+            when=CLIENT,
         ),
         getter=get_data,
         state=StartSG.main,
@@ -93,7 +97,7 @@ validate_dialog = Dialog(
     ),
     Window(
         Const(
-            text='Введите номер вашей группы:'
+            text='Введите номер вашей группы:',
         ),
         MAIN_MENU,
         TextInput(
@@ -106,18 +110,18 @@ validate_dialog = Dialog(
     ),
     Window(
         Const(
-            text='Ваши группы'
+            text='Ваши группы',
         ),
         Radio(
             Format(
-                text='☑️ {item[0]}'
+                text='☑️ {item[0]}',
             ),
             Format(
-                text='⬜ {item[0]}'
+                text='⬜ {item[0]}',
             ),
             id='radio_group',
             item_id_getter=itemgetter(1),
-            items='radio'
+            items='radio',
         ),
         Button(
             Const(
@@ -127,6 +131,7 @@ validate_dialog = Dialog(
             on_click=on_trainer,
             when='is_checked',
         ),
+        MAIN_MENU,
         state=StartSG.group,
         getter=get_radio_data,
     ),

@@ -1,22 +1,19 @@
 import logging
 
-from typing import Any, Callable, TypeVar, Literal
-
 from aiogram.types import CallbackQuery
 
-from aiogram_dialog.api.internal import RawKeyboard
-from aiogram_dialog import DialogManager, ShowMode, Data
+from aiogram_dialog import Data, DialogManager, ShowMode
 from aiogram_dialog.api.entities.context import Context
-from aiogram_dialog.widgets.text import Format, Text
+from aiogram_dialog.api.internal import RawKeyboard
 from aiogram_dialog.widgets.kbd import (
     Button,
     Calendar,
-    SwitchTo,
     CalendarScope,
-    Multiselect,
     ManagedCalendar,
     ManagedMultiselect,
-    ManagedRadio
+    ManagedRadio,
+    Multiselect,
+    SwitchTo,
 )
 from aiogram_dialog.widgets.kbd.calendar_kbd import (
     DATE_TEXT,
@@ -27,47 +24,45 @@ from aiogram_dialog.widgets.kbd.calendar_kbd import (
     CalendarYearsView,
 )
 
+from aiogram_dialog.widgets.text import Format, Text
+
 from babel.dates import get_day_names, get_month_names
 
 from datetime import date
 
-from db import (
-    update_working_day,
-    add_trainer_schedule,
-    get_trainer_schedules,
-    cancel_training_db,
-    cancel_trainer_schedule,
-    get_clients_training,
-    TrainerSchedule
-)
+from typing import Any, Callable, Literal, TypeVar
 
+from db import (
+    add_trainer_schedule,
+    get_clients_training,
+    get_trainer_schedules,
+    cancel_trainer_schedule,
+    cancel_training_db,
+    TrainerSchedule,
+    update_working_day,
+)
+from schemas import SelectedDateSchema, WorkDaySchema
+from send_message import send_message
 from states import TrainerScheduleStates
 
 
 logger = logging.getLogger(__name__)
 
-
 T = TypeVar("T")
 TypeFactory = Callable[[str], T]
 
-SELECTED_DATES = 'selected_dates'
-DATE = 'date'
-TIME = 'time'
-RADIO_WORK = 'radio_work'
-RADIO_CAL = 'radio_cal'
-SCHEDULES = 'schedules'
-WORK = 'work'
-SEL = 'sel'
-START = 'start'
-STOP = 'stop'
-BREAKS = 'breaks'
-WIDGET_DATA = 'widget_data'
-SELECTED_DATE = 'selected_date'
-DATA = 'data'
-CLIENTS = 'clients'
-SEL_D = 'sel_d'
 CLIENT_ID = 'client_id'
+DATA = 'data'
+DATE = 'date'
+RADIO_WORK = 'radio_work'
+SCHEDULES = 'schedules'
+SEL = 'sel'
+SEL_D = 'sel_d'
+SELECTED_DATE = 'selected_date'
+SELECTED_DATES = 'selected_dates'
+TIME = 'time'
 TRAINER_ID = 'trainer_id'
+TRAININGS = 'trainings'
 
 
 class WeekDay(Text):
@@ -78,7 +73,9 @@ class WeekDay(Text):
         locale = dialog_manager.event.from_user.language_code
 
         return get_day_names(
-            width='short', context='stand-alone', locale=locale,
+            width='short',
+            context='stand-alone',
+            locale=locale,
         )[selected_date.weekday()].title()
 
 
@@ -189,22 +186,22 @@ def _get_sortred_items(work: str) -> list[int]:
     return sorted(map(int, work.split(',')))
 
 
-def _transform_time(data: str) -> dict:
+def _transform_time(time_: str) -> dict[str, int | str]:
 
-    items: list[int] = sorted(map(int, data.split(',')))
+    items: list[int] = sorted(map(int, time_.split(',')))
     start, stop = min(items), max(items)
     breaks: str = ','.join(
         str(item) for item in range(start, stop+1) if item not in items
     ) or 'нет'
 
-    return {START: start, STOP: stop, BREAKS: breaks}
+    return {'start': start, 'stop': stop, 'breaks': breaks}
 
 
 async def on_date_selected(
     callback: CallbackQuery,
     widget: ManagedCalendar,
     dialog_manager: DialogManager,
-    clicked_date: date, /,
+    clicked_date: date
 ):
 
     today = date.today().isoformat()
@@ -224,29 +221,51 @@ async def on_date_selected(
                 selected.pop(serial_date)
             else:
 
-                data: dict = selected[serial_date]
+                selected_data: dict[str, int | str] = \
+                    SelectedDateSchema(**selected[serial_date]).model_dump()
 
-                clients: list[dict] = await get_clients_training(
-                    dialog_manager,
-                    serial_date
+                trainings: list[dict] = await get_clients_training(
+                    dialog_manager=dialog_manager,
+                    date=serial_date,
                 )
 
                 dialog_manager.dialog_data[SELECTED_DATE] = {
                     DATE: serial_date,
-                    DATA: data,
-                    CLIENTS: clients
+                    DATA: selected_data,
+                    TRAININGS: trainings
                 }
 
                 await dialog_manager.switch_to(
                     state=TrainerScheduleStates.selected_date,
-                    show_mode=ShowMode.EDIT
+                    show_mode=ShowMode.EDIT,
                 )
 
         else:
             widget_item: Literal['1', '2', '3'] = \
-                _get_curent_widget_context(dialog_manager, RADIO_WORK)
+                _get_curent_widget_context(
+                    dialog_manager=dialog_manager,
+                    key=RADIO_WORK,
+                )
 
             selected[serial_date] = int(widget_item)
+
+
+async def revoke(
+    callback: CallbackQuery,
+    widget: SwitchTo,
+    dialog_manager: DialogManager
+):
+
+    context: Context = dialog_manager.current_context()
+
+    items: list[str] = context.widget_data.get(SEL_D, [])
+    items.clear()
+
+    await update_selected_dates(
+        callback=callback,
+        widget=widget,
+        dialog_manager=dialog_manager,
+    )
 
 
 async def update_selected_dates(
@@ -262,9 +281,9 @@ async def update_selected_dates(
     del dialog_manager.dialog_data[SELECTED_DATE]
 
     await set_radio_calendar(
-        callback,
-        widget,
-        dialog_manager
+        callback=callback,
+        widget=widget,
+        dialog_manager=dialog_manager,
     )
 
 
@@ -280,9 +299,9 @@ async def cancel_training(
     if today >= dialog_manager.dialog_data[SELECTED_DATE][DATE]:
 
         await update_selected_dates(
-            callback,
-            widget,
-            dialog_manager
+            callback=callback,
+            widget=widget,
+            dialog_manager=dialog_manager,
         )
         await dialog_manager.switch_to(
             state=TrainerScheduleStates.schedule,
@@ -297,24 +316,36 @@ async def cancel_training(
 
         items: list[str] = context.widget_data.get(SEL_D, [])
 
-        clients: list[dict] = \
-            dialog_manager.dialog_data[SELECTED_DATE][CLIENTS]
+        trainings: list[dict] = \
+            dialog_manager.dialog_data[SELECTED_DATE][TRAININGS]
 
         for item in items:
-            client: dict = clients[int(item)]
+            client: dict = trainings[int(item)]
             await cancel_training_db(
-                dialog_manager,
-                client[CLIENT_ID],
-                client[TRAINER_ID],
-                client[DATE],
-                client[TIME]
+                dialog_manager=dialog_manager,
+                client_id=client[CLIENT_ID],
+                trainer_id=client[TRAINER_ID],
+                date_=client[DATE],
+                time_=client[TIME],
             )
 
-        clients: list[dict] = [
-            client for i, client in enumerate(clients) if str(i) not in items
+            text = (
+                f'Ваше занятие в группе {client[TRAINER_ID]} '
+                f'{client[DATE]} в {client[TIME]}:00 отменено.'
+            )
+
+            await send_message(
+                dialog_manager=dialog_manager,
+                user_id=client[CLIENT_ID],
+                text=text,
+            )
+
+        trainings: list[dict] = [
+            training for i, training in enumerate(trainings)
+            if str(i) not in items
         ]
 
-        dialog_manager.dialog_data[SELECTED_DATE][CLIENTS] = clients
+        dialog_manager.dialog_data[SELECTED_DATE][TRAININGS] = trainings
 
     if SEL_D in context.widget_data:
         context.widget_data[SEL_D].clear()
@@ -336,27 +367,38 @@ async def cancel_work(
             show_alert=True,
         )
         await update_selected_dates(
-            callback,
-            widget,
-            dialog_manager
+            callback=callback,
+            widget=widget,
+            dialog_manager=dialog_manager,
         )
 
     else:
-        clients: list[dict] = \
-            dialog_manager.dialog_data[SELECTED_DATE][CLIENTS]
+        trainings: list[dict] = \
+            dialog_manager.dialog_data[SELECTED_DATE][TRAININGS]
 
-        for client in clients:
+        for training in trainings:
             await cancel_training_db(
-                dialog_manager,
-                client[CLIENT_ID],
-                client[TRAINER_ID],
-                client[DATE],
-                client[TIME]
+                dialog_manager=dialog_manager,
+                client_id=training[CLIENT_ID],
+                trainer_id=training[TRAINER_ID],
+                date_=training[DATE],
+                time_=training[TIME],
+            )
+
+            text = (
+                f'Ваше занятие в группе {training[TRAINER_ID]} '
+                f'{training[DATE]} в {training[TIME]}:00 отменено.'
+            )
+
+            await send_message(
+                dialog_manager=dialog_manager,
+                user_id=training[CLIENT_ID],
+                text=text,
             )
 
         await cancel_trainer_schedule(
-            dialog_manager,
-            work_date
+            dialog_manager=dialog_manager,
+            date=work_date,
         )
 
         dialog_manager.dialog_data.pop(SELECTED_DATE)
@@ -375,18 +417,21 @@ async def apply_selected(
     today = date.today().isoformat()
     selected_dates: dict = dialog_manager.dialog_data.get(SELECTED_DATES)
 
-    selected: dict = {
+    now_selected: dict = {
         date_: item for date_, item in selected_dates.items()
         if isinstance(item, int) and today < date_
     }
 
-    if selected:
-        await add_trainer_schedule(dialog_manager, selected)
+    if now_selected:
+        await add_trainer_schedule(
+            dialog_manager=dialog_manager,
+            data=now_selected,
+        )
 
-        for date_, item in selected.items():
+        for date_, item in now_selected.items():
             time_: str = dialog_manager.start_data[SCHEDULES][item]
-            value: dict = _transform_time(time_)
-            dialog_manager.dialog_data[SELECTED_DATES][date_] = value
+            data: dict = _transform_time(time_)
+            dialog_manager.dialog_data[SELECTED_DATES][date_] = data
 
 
 async def set_radio_work(
@@ -396,7 +441,10 @@ async def set_radio_work(
 ):
 
     radio: ManagedRadio = dialog_manager.find(RADIO_WORK)
-    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
+    widget_item: str = _get_curent_widget_context(
+        dialog_manager=dialog_manager,
+        key=RADIO_WORK
+    )
 
     await radio.set_checked(widget_item)
 
@@ -426,9 +474,15 @@ async def set_checked(
     dialog_manager: DialogManager
 ):
 
-    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
+    widget_item: str = _get_curent_widget_context(
+        dialog_manager=dialog_manager,
+        key=RADIO_WORK,
+    )
 
-    await _set_checked(dialog_manager, int(widget_item))
+    await _set_checked(
+        dialog_manager=dialog_manager,
+        id=int(widget_item)
+    )
 
 
 async def _set_checked(dialog_manager: DialogManager, id: int):
@@ -483,10 +537,23 @@ async def apply_work(
 
     work = ','.join(map(str, selected))
 
-    await update_working_day(dialog_manager, int(widget_item), work)
-    await reset_checked(callback, widget, dialog_manager)
+    work_schema: WorkDaySchema = WorkDaySchema(
+        item=int(widget_item),
+        work=work,
+    )
 
-    dialog_manager.start_data[SCHEDULES][int(widget_item)] = work
+    await update_working_day(
+        dialog_manager=dialog_manager,
+        id=work_schema.item,
+        value=work_schema.work,
+    )
+    await reset_checked(
+        callback=callback,
+        widget=widget,
+        dialog_manager=dialog_manager
+    )
+
+    dialog_manager.start_data[SCHEDULES][work_schema.item] = work_schema.work
 
 
 async def reset_calendar(
@@ -506,7 +573,10 @@ async def process_result(
 
     widget_data = {}
 
-    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
+    widget_item: str = _get_curent_widget_context(
+        dialog_manager=dialog_manager,
+        key=RADIO_WORK,
+    )
     if widget_item:
         widget_data[RADIO_WORK] = widget_item
 
@@ -521,4 +591,4 @@ async def process_start(
 ):
 
     context: Context = dialog_manager.current_context()
-    context.widget_data[RADIO_WORK] = start_data[WIDGET_DATA][RADIO_WORK]
+    context.widget_data[RADIO_WORK] = start_data['widget_data'][RADIO_WORK]
