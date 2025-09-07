@@ -22,13 +22,15 @@ from aiogram_dialog.widgets.kbd.calendar_kbd import (
     CalendarMonthView,
     CalendarScopeView,
     CalendarYearsView,
+    CalendarUserConfig,
 )
-
 from aiogram_dialog.widgets.text import Format, Text
 
 from babel.dates import get_day_names, get_month_names
 
-from datetime import date
+from datetime import date, datetime
+
+from zoneinfo import ZoneInfo
 
 from typing import Any, Callable, Literal, TypeVar
 
@@ -44,6 +46,7 @@ from db import (
 from schemas import SelectedDateSchema, WorkDaySchema
 from send_message import send_message
 from states import TrainerScheduleStates
+from timezones import get_current_date
 
 
 logger = logging.getLogger(__name__)
@@ -51,7 +54,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 TypeFactory = Callable[[str], T]
 
-CLIENT_ID = 'client_id'
+CLIENT_ID = 'id'
 DATA = 'data'
 DATE = 'date'
 RADIO_WORK = 'radio_work'
@@ -61,6 +64,7 @@ SEL_D = 'sel_d'
 SELECTED_DATE = 'selected_date'
 SELECTED_DATES = 'selected_dates'
 TIME = 'time'
+TIME_ZONE = 'time_zone'
 TRAINER_ID = 'trainer_id'
 TRAININGS = 'trainings'
 
@@ -139,6 +143,29 @@ class CustomCalendar(Calendar):
             ),
         }
 
+    async def _get_user_config(
+            self,
+            data: dict,
+            manager: DialogManager,
+    ) -> CalendarUserConfig:
+        """
+        User related config getter.
+
+        Override this method to customize how user config is retrieved.
+
+        :param data: data from window getter
+        :param manager: dialog manager instance
+        :return:
+        """
+
+        tz = ZoneInfo(manager.start_data.get(TIME_ZONE))
+
+        calendar_config = CalendarUserConfig(
+            timezone=tz
+        )
+
+        return calendar_config
+
 
 class CustomMultiselect(Multiselect):
 
@@ -204,15 +231,16 @@ async def on_date_selected(
     clicked_date: date
 ):
 
-    today = date.today().isoformat()
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
 
     serial_date = clicked_date.isoformat()
 
     selected: dict = dialog_manager.dialog_data.get(SELECTED_DATES, {})
 
-    _update_selected_dates(selected, today)
+    _update_selected_dates(selected, today.date().isoformat())
 
-    if today < serial_date:
+    if today.date().isoformat() < serial_date:
 
         if serial_date in selected:
 
@@ -226,7 +254,7 @@ async def on_date_selected(
 
                 trainings: list[dict] = await get_clients_training(
                     dialog_manager=dialog_manager,
-                    date=serial_date,
+                    date_=serial_date,
                 )
 
                 dialog_manager.dialog_data[SELECTED_DATE] = {
@@ -274,9 +302,11 @@ async def update_selected_dates(
     dialog_manager: DialogManager
 ):
 
-    today: str = date.today().isoformat()
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
+
     selected: dict = dialog_manager.dialog_data[SELECTED_DATES]
-    _update_selected_dates(selected, today)
+    _update_selected_dates(selected, today.date().isoformat())
 
     del dialog_manager.dialog_data[SELECTED_DATE]
 
@@ -294,9 +324,12 @@ async def cancel_training(
 ):
 
     context: Context = dialog_manager.current_context()
-    today: str = date.today().isoformat()
 
-    if today >= dialog_manager.dialog_data[SELECTED_DATE][DATE]:
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
+
+    if today.date().isoformat() >= \
+            dialog_manager.dialog_data[SELECTED_DATE][DATE]:
 
         await update_selected_dates(
             callback=callback,
@@ -358,10 +391,13 @@ async def cancel_work(
 ):
 
     context: Context = dialog_manager.current_context()
-    today: str = date.today().isoformat()
+
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
+
     work_date: str = dialog_manager.dialog_data[SELECTED_DATE][DATE]
 
-    if today >= work_date:
+    if today.date().isoformat() >= work_date:
         await callback.answer(
             text='Данные устарели, попробуйте еще раз, пожалуйста.',
             show_alert=True,
@@ -398,7 +434,7 @@ async def cancel_work(
 
         await cancel_trainer_schedule(
             dialog_manager=dialog_manager,
-            date=work_date,
+            date_=work_date,
         )
 
         dialog_manager.dialog_data.pop(SELECTED_DATE)
@@ -414,12 +450,14 @@ async def apply_selected(
     dialog_manager: DialogManager
 ):
 
-    today = date.today().isoformat()
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
+
     selected_dates: dict = dialog_manager.dialog_data.get(SELECTED_DATES)
 
     now_selected: dict = {
         date_: item for date_, item in selected_dates.items()
-        if isinstance(item, int) and today < date_
+        if isinstance(item, int) and today.date().isoformat() < date_
     }
 
     if now_selected:
@@ -465,7 +503,8 @@ async def set_radio_calendar(
     selected: dict = dialog_manager.dialog_data.setdefault(SELECTED_DATES, {})
 
     for schedule in schedules:
-        selected[schedule.date] = _transform_time(schedule.time)
+        selected[schedule.date.isoformat()] =\
+            _transform_time(schedule.time)
 
 
 async def set_checked(

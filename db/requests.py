@@ -1,3 +1,5 @@
+import logging
+
 from aiogram.types import CallbackQuery
 
 from aiogram_dialog import DialogManager
@@ -6,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from datetime import date
+from datetime import datetime
 
 from db.models import (
     Client,
@@ -23,19 +25,26 @@ from db.models import (
     WorkingDay,
 )
 from schemas import ScheduleSchema
+from timezones import get_current_date
 
 
-OFFSET = 'offset'
-LIMIT = 'limit'
-SESSION = 'session'
+logger = logging.getLogger(__name__)
+
+DATE = 'date'
 ID = 'id'
+LIMIT = 'limit'
+NAME = 'name'
+OFFSET = 'offset'
+RADIO_WORK = 'radio_work'
+SCHEDULES = 'schedules'
+SESSION = 'session'
+TIME = 'time'
+TIME_ZONE = 'time_zone'
+TRAINER_ID = 'trainer_id'
+UTC = 'UTC'
+WORK = 'work'
 WORKOUT = 'workout'
 WORKOUTS = 'workouts'
-SCHEDULES = 'schedules'
-WORK = 'work'
-RADIO_WORK = 'radio_work'
-NAME = 'name'
-TRAINER_ID = 'trainer_id'
 
 
 async def get_user(
@@ -75,11 +84,12 @@ async def add_trainer(
     id: int,
     name: str,
     dialog_manager: DialogManager,
+    time_zone: str
 ) -> Trainer:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    trainer: Trainer = set_trainer(id=id, name=name)
+    trainer: Trainer = set_trainer(id=id, name=name, time_zone=time_zone)
 
     for item in range(1, 4):
         trainer.working_days.append(
@@ -113,6 +123,8 @@ async def add_client(
 
     if trainer is None:
         raise ValueError
+
+    dialog_manager.dialog_data[TIME_ZONE] = trainer.time_zone
 
     client: Client = set_client(id=client_id, name=name)
     workout: Workout = set_workout(
@@ -286,8 +298,9 @@ async def add_trainer_schedule(
     )
 
     for date_, work_item in data.items():
+        dt = datetime.fromisoformat(date_)
         trainer_schedule: TrainerSchedule = set_trainer_schedule(
-            date=date_,
+            date=dt.date(),
             time=dialog_manager.start_data[SCHEDULES][work_item],
             trainer_id=trainer.id,
         )
@@ -299,18 +312,19 @@ async def add_trainer_schedule(
 
 async def cancel_trainer_schedule(
     dialog_manager: DialogManager,
-    date: str
+    date_: str
 ):
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
+    dt = datetime.fromisoformat(date_)
     trainer_id: int = dialog_manager.event.from_user.id
 
     stmt = (
         select(TrainerSchedule)
         .where(
             TrainerSchedule.trainer_id == trainer_id,
-            TrainerSchedule.date == date
+            TrainerSchedule.date == dt.date(),
         )
     )
 
@@ -334,10 +348,19 @@ async def add_training(
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
+    dt = datetime.fromisoformat(date_)
+
+    ScheduleSchema(
+        client_id=client_id,
+        trainer_id=trainer_id,
+        date=dt.date(),
+        time=time_,
+    )
+
     schedule: Schedule = set_schedule(
         client_id=client_id,
         trainer_id=trainer_id,
-        date=date_,
+        date=dt.date(),
         time=time_,
     )
 
@@ -380,6 +403,8 @@ async def cancel_training_db(
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
+    dt = datetime.fromisoformat(date_)
+
     stmt = (
         select(Client)
         .where(Client.id == client_id)
@@ -399,7 +424,7 @@ async def cancel_training_db(
 
         for schedule in client.schedules:  # Schedule
             if (schedule.trainer_id == trainer_id
-                and schedule.date == date_
+                and schedule.date == dt.date()
                     and schedule.time == time_):
                 await session.delete(schedule)
                 break
@@ -409,12 +434,13 @@ async def cancel_training_db(
 
 async def get_clients_training(
     dialog_manager: DialogManager,
-    date: str,
+    date_: str,
     trainer_id: int = None
 ) -> list[dict]:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
+    dt = datetime.fromisoformat(date_)
     trainer_id: int = trainer_id or dialog_manager.event.from_user.id
 
     stmt = (
@@ -422,7 +448,7 @@ async def get_clients_training(
         .join(Schedule)
         .where(
             Schedule.trainer_id == trainer_id,
-            Schedule.date == date
+            Schedule.date == dt.date(),
         )
         .order_by(Schedule.time)
     )
@@ -432,15 +458,12 @@ async def get_clients_training(
     data_trainings = []
     if result:
         for client, schedule in result.all():  # Client, Schedule
-            schedule_schema: ScheduleSchema = ScheduleSchema(
-                client_name=client.name,
-                client_id=client.id,
-                trainer_id=schedule.trainer_id,
-                date=schedule.date,
-                time=schedule.time,
-            )
-
-            data_trainings.append(schedule_schema.model_dump())
+            data = {}
+            data.update(client.get_data())
+            data[TRAINER_ID] = schedule.trainer_id
+            data[DATE] = schedule.date.isoformat()
+            data[TIME] = schedule.time
+            data_trainings.append(data)
 
     return data_trainings
 
@@ -452,7 +475,9 @@ async def get_trainer_schedules(
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    today = date.today().isoformat()
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
+
     trainer_id = trainer_id or dialog_manager.event.from_user.id
 
     stmt = (
@@ -466,7 +491,7 @@ async def get_trainer_schedules(
 
     schedules: list[TrainerSchedule] = [
         schedule for schedule in trainer.trainer_schedules
-        if schedule.date > today
+        if schedule.date > today.date()
     ]
 
     return schedules
@@ -474,17 +499,19 @@ async def get_trainer_schedules(
 
 async def get_schedule(
     dialog_manager: DialogManager,
-    date: str,
-    time: int,
+    date_: str,
+    time_: int,
     trainer_id: int
 ) -> Schedule | None:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
+    dt = datetime.fromisoformat(date_)
+
     stmt = select(Schedule).where(
         Schedule.trainer_id == trainer_id,
-        Schedule.date == date,
-        Schedule.time == time
+        Schedule.date == dt.date(),
+        Schedule.time == time_
     )
 
     result = await session.execute(stmt)
@@ -499,13 +526,15 @@ async def get_schedules(
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    today: str = date.today().isoformat()
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
 
     stmt = (
         select(Schedule)
         .where(
             Schedule.trainer_id == trainer_id,
-            Schedule.date >= today)
+            Schedule.date >= today.date()
+        )
     )
 
     result = await session.execute(stmt)
@@ -517,18 +546,19 @@ async def get_client_trainings(
     dialog_manager: DialogManager,
     trainer_id: int,
     client_id: int
-) -> list[Schedule] | None:
+) -> list[Schedule]:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
-    today: str = date.today().isoformat()
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
 
     stmt = (
         select(Schedule)
         .where(
             Schedule.trainer_id == trainer_id,
             Schedule.client_id == client_id,
-            Schedule.date > today
+            Schedule.date > today.date()
         )
     )
 

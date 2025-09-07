@@ -21,13 +21,17 @@ from aiogram_dialog.widgets.kbd.calendar_kbd import (
     CalendarDaysView,
     CalendarMonthView,
     CalendarScopeView,
-    CalendarYearsView
+    CalendarYearsView,
+    CalendarUserConfig,
 )
 from aiogram_dialog.widgets.text import Format, Text
 
 from babel.dates import get_day_names, get_month_names
 
-from datetime import date
+from datetime import date, datetime
+
+from zoneinfo import ZoneInfo
+
 from db import (
     add_training,
     cancel_training_db,
@@ -43,19 +47,21 @@ from db import (
 from send_message import send_message
 from schemas import ScheduleSchema
 from states import ClientState
+from timezones import get_current_date
 
 
 logger = logging.getLogger(__name__)
 
-EXIST = 'exist'
-TRAINER_ID = 'trainer_id'
 DATE = 'date'
-SELECTED_DATES = 'selected_dates'
-SELECTED_DATE = 'selected_date'
-SEL_D = 'sel_d'
-WORKOUTS = 'workouts'
-RAD_SCHED = 'rad_sched'
+EXIST = 'exist'
 MY_SIGN = 'my_sign'
+RAD_SCHED = 'rad_sched'
+SEL_D = 'sel_d'
+SELECTED_DATE = 'selected_date'
+SELECTED_DATES = 'selected_dates'
+TIME_ZONE = 'time_zone'
+TRAINER_ID = 'trainer_id'
+WORKOUTS = 'workouts'
 
 
 def split_time(value: str, delimiter=',') -> list[int]:
@@ -133,6 +139,29 @@ class CustomCalendar(Calendar):
             ),
         }
 
+    async def _get_user_config(
+            self,
+            data: dict,
+            manager: DialogManager,
+    ) -> CalendarUserConfig:
+        """
+        User related config getter.
+
+        Override this method to customize how user config is retrieved.
+
+        :param data: data from window getter
+        :param manager: dialog manager instance
+        :return:
+        """
+
+        tz = ZoneInfo(manager.start_data.get(TIME_ZONE))
+
+        calendar_config = CalendarUserConfig(
+            timezone=tz
+        )
+
+        return calendar_config
+
 
 class CustomRadio(Radio):
 
@@ -196,17 +225,20 @@ async def set_calendar(
     )
 
     data_schedules: dict[str, list[int]] = {
-        schedule.date: split_time(schedule.time)
-        for schedule in trainer_schedules
+        tr_schedule.date.isoformat(): split_time(tr_schedule.time)
+        for tr_schedule in trainer_schedules
     }
 
     for schedule in schedules:  # Schedule
-        schedule: ScheduleSchema = ScheduleSchema(**schedule.get_data())
-        if schedule.date in data_schedules:
-            if schedule.time in data_schedules[schedule.date]:
-                data_schedules[schedule.date].remove(schedule.time)
-                if not data_schedules[schedule.date]:
-                    data_schedules.pop(schedule.date)
+        schedule_schema: ScheduleSchema = ScheduleSchema(**schedule.get_data())
+        iso_date: str = schedule_schema.date.isoformat()
+        if iso_date in data_schedules:
+            if schedule_schema.time in data_schedules[iso_date]:
+                data_schedules[iso_date].remove(
+                    schedule_schema.time
+                )
+                if not data_schedules[iso_date]:
+                    data_schedules.pop(iso_date)
 
     dialog_manager.dialog_data[SELECTED_DATES] = data_schedules
 
@@ -226,11 +258,12 @@ async def on_date_selected(
     clicked_date: date
 ):
 
-    today: str = date.today().isoformat()
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
 
     if clicked_date.isoformat() in dialog_manager.dialog_data[SELECTED_DATES]:
 
-        if today >= clicked_date.isoformat():
+        if today.date() >= clicked_date:
 
             await callback.answer(
                 text='Данные устарели, попробуйте еще раз, пожалуйста.',
@@ -266,11 +299,12 @@ async def on_date(
     clicked_date: date
 ):
 
-    today: str = date.today().isoformat()
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
 
     if clicked_date.isoformat() in dialog_manager.dialog_data[SELECTED_DATES]:
 
-        if today >= clicked_date.isoformat():
+        if today.date() >= clicked_date:
 
             callback.answer(
                 text='Данные устарели, попробуйте еще раз, пожалуйста.',
@@ -325,7 +359,9 @@ async def exist_sign(
 ):
 
     context: Context = dialog_manager.current_context()
-    today: str = date.today().isoformat()
+
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
 
     radio_item: str = context.widget_data.get(RAD_SCHED)
 
@@ -337,12 +373,13 @@ async def exist_sign(
 
     schedule: Schedule | None = await get_schedule(
         dialog_manager=dialog_manager,
-        date=date_,
-        time=time_,
+        date_=date_,
+        time_=time_,
         trainer_id=trainer_id,
     )
 
-    dialog_manager.dialog_data[EXIST] = schedule is None and today < date_
+    dialog_manager.dialog_data[EXIST] = schedule is None \
+        and today.date().isoformat() < date_
 
     if schedule is None:
         await add_training(
@@ -368,8 +405,14 @@ async def set_client_trainings(
         trainer_id=dialog_manager.start_data[TRAINER_ID],
         client_id=dialog_manager.event.from_user.id,
     )
+    if not schedules:
+        await callback.answer(
+            text='У вас нет записей.',
+            show_alert=True,
+        )
     for schedule in schedules:
-        selected_dates.setdefault(schedule.date, []).append(schedule.time)
+        selected_dates.setdefault(schedule.date.isoformat(), [])\
+            .append(schedule.time)
 
     dialog_manager.dialog_data[MY_SIGN] = 1
 
@@ -390,13 +433,14 @@ async def cancel_training(
     dialog_manager: DialogManager
 ):
 
-    today: str = date.today().isoformat()
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+    today: datetime = get_current_date(timezone)
 
     context: Context = dialog_manager.current_context()
 
     selected_date: str = dialog_manager.dialog_data[SELECTED_DATE]
 
-    if today < selected_date:
+    if today.date().isoformat() < selected_date:
 
         times: list[int] = \
             dialog_manager.dialog_data[SELECTED_DATES][selected_date]

@@ -9,6 +9,7 @@ from aiogram_dialog.widgets.input import ManagedTextInput
 
 from functools import wraps
 from string import ascii_lowercase, digits
+from timezones import get_time_zones
 from typing import Callable
 
 #  from config import load_config, Config
@@ -30,15 +31,18 @@ logger = logging.getLogger(__name__)
 ID = 'id'
 NAME = 'name'
 SIMBOLS = ascii_lowercase + digits
+RADIO_GROUP = 'radio_group'
+RADIO_TZ = 'radio_tz'
+TIME_ZONE = 'time_zone'
 TRAINERS = 'trainers'
 TRAINER_ID = 'trainer_id'
-RADIO_GROUP = 'radio_group'
 WORKOUTS = 'workouts'
 
 
 def set_user(
     dialog_manager: DialogManager,
-    schema: ClientSchema | TrainerSchema
+    schema: ClientSchema | TrainerSchema,
+    time_zone: str | None = None
 ) -> ClientSchema | TrainerSchema:
 
     id = dialog_manager.event.from_user.id
@@ -47,6 +51,7 @@ def set_user(
     schema: ClientSchema | TrainerSchema = schema(
         id=id,
         name=name,
+        time_zone=time_zone,
     )
 
     return schema
@@ -127,6 +132,7 @@ async def on_trainer(
 
     dialog_manager.start_data.clear()
     dialog_manager.start_data[TRAINER_ID] = trainer.id
+    dialog_manager.start_data[TIME_ZONE] = trainer.time_zone
     dialog_manager.start_data.update(client.model_dump())
 
     await dialog_manager.start(
@@ -172,21 +178,9 @@ async def trainer_is_valid(
         text: str
 ):
 
-    trainer: TrainerSchema = set_user(
-        dialog_manager=dialog_manager,
-        schema=TrainerSchema,
-    )
-
-    await add_trainer(
-        id=trainer.id,
-        name=trainer.name,
-        dialog_manager=dialog_manager,
-    )
-
-    await dialog_manager.start(
-        data=trainer.model_dump(),
-        state=TrainerState.main,
-        mode=StartMode.RESET_STACK,
+    await dialog_manager.switch_to(
+        state=StartSG.set_tz,
+        show_mode=ShowMode.EDIT,
     )
 
 
@@ -232,6 +226,7 @@ async def client_is_valid(
         user_data: dict = client.model_dump()
         user_data[TRAINER_ID] = trainer_id
         user_data[WORKOUTS] = 0
+        user_data[TIME_ZONE] = dialog_manager.dialog_data.get(TIME_ZONE)
 
         await dialog_manager.start(
             data=user_data,
@@ -242,3 +237,35 @@ async def client_is_valid(
         await message.answer(
             text='Неверный номер группы, попробуйте еще раз, пожалуйста!',
         )
+
+
+async def apply_tz(
+    callback: CallbackQuery,
+    widget: Button,
+    dialog_manager: DialogManager
+):
+
+    context: Context = dialog_manager.current_context()
+    item_radio: str = context.widget_data.get(RADIO_TZ)
+
+    timezones: list[str] = get_time_zones()
+    local_zone: str = timezones[int(item_radio)]
+
+    trainer: TrainerSchema = set_user(
+        dialog_manager=dialog_manager,
+        schema=TrainerSchema,
+        time_zone=local_zone,
+    )
+
+    await add_trainer(
+        id=trainer.id,
+        name=trainer.name,
+        dialog_manager=dialog_manager,
+        time_zone=local_zone,
+    )
+
+    await dialog_manager.start(
+        data=trainer.model_dump(),
+        state=TrainerState.main,
+        mode=StartMode.RESET_STACK,
+    )

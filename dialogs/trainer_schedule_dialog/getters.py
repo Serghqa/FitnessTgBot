@@ -7,7 +7,7 @@ from aiogram_dialog.widgets.kbd.select import ManagedMultiselect
 
 logger = logging.getLogger(__name__)
 
-CLIENT_NAME = 'client_name'
+CLIENT_NAME = 'name'
 DATE = 'date'
 IS_APPLY = 'is_apply'
 IS_CANCEL = 'is_cancel'

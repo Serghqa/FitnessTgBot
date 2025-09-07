@@ -33,6 +33,7 @@ RADIO_MESS = 'radio_mess'
 RADIO_GROUP = 'radio_pag'
 RADIO_WORK = 'radio_work'
 SCHEDULES = 'schedules'
+TIME_ZONE = 'time_zone'
 WIDGET_DATA = 'widget_data'
 
 
@@ -228,8 +229,9 @@ async def to_schedule_dialog(
     widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
     work_days: list[WorkingDay] = \
         await get_work_days(dialog_manager)
+    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
 
-    data = {SCHEDULES: {}}
+    data = {SCHEDULES: {}, TIME_ZONE: timezone}
 
     for work_day in work_days:
         valid_day: WorkDaySchema = WorkDaySchema(**work_day.get_data())

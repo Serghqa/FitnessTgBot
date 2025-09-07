@@ -26,15 +26,16 @@ class LoggingMiddleware(BaseMiddleware):
         result = await handler(event, data)
 
         if dialog_manager:
-            context: Context = dialog_manager.current_context()
+            if dialog_manager.has_context():
+                context: Context = dialog_manager.current_context()
 
-            logger.info(
-                '<<Context>>\nstart_data=%s,\ndialog_data=%s,'
-                '\nstate=%s,\nwidget_data=%s\n',
-                context.start_data,
-                context.dialog_data,
-                context.state,
-                context.widget_data,
-            )
+                logger.info(
+                    '<<Context>>\nstart_data=%s,\ndialog_data=%s,'
+                    '\nstate=%s,\nwidget_data=%s\n',
+                    context.start_data,
+                    context.dialog_data,
+                    context.state,
+                    context.widget_data,
+                )
 
         return result

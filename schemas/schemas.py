@@ -1,3 +1,4 @@
+from datetime import date
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -21,6 +22,7 @@ class ClientSchema(UserSchema):
 class TrainerSchema(UserSchema):
 
     is_trainer: bool = Field(default=False)
+    time_zone: str
 
     @model_validator(mode='after')
     def set_is_trainer(self):
@@ -64,5 +66,5 @@ class ScheduleSchema(BaseModel):
     client_name: str = Field(default='no_name')
     client_id: int
     trainer_id: int
-    date: str
+    date: date
     time: int = Field(ge=0, le=23)

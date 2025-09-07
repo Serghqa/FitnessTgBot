@@ -1,4 +1,6 @@
-from sqlalchemy import BigInteger, ForeignKey, Integer,  String
+from datetime import date as dt
+
+from sqlalchemy import BigInteger, Date, ForeignKey, Integer,  String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from typing import Any
@@ -15,6 +17,7 @@ class Trainer(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True,)
     name: Mapped[str] = mapped_column(String)
+    time_zone: Mapped[str] = mapped_column(String)
 
     clients: Mapped[list['Client']] = relationship(
         back_populates='trainers',
@@ -41,7 +44,8 @@ class Trainer(Base):
 
         return {
             'id': self.id,
-            'name': self.name
+            'name': self.name,
+            'time_zone': self.time_zone,
         }
 
 
@@ -71,7 +75,7 @@ class Client(Base):
 
         return {
             'id': self.id,
-            'name': self.name
+            'name': self.name,
         }
 
 
@@ -134,7 +138,7 @@ class Schedule(Base):
         BigInteger,
         ForeignKey('trainer.id'),
     )
-    date: Mapped[str] = mapped_column(String)
+    date: Mapped[dt] = mapped_column(Date)
     time: Mapped[int] = mapped_column(Integer)
 
     client = relationship('Client', back_populates='schedules',)
@@ -146,7 +150,7 @@ class Schedule(Base):
             'client_id': self.client_id,
             'trainer_id': self.trainer_id,
             'date': self.date,
-            'time': self.time
+            'time': self.time,
         }
 
 
@@ -175,7 +179,7 @@ class WorkingDay(Base):
 
         return {
             'item': self.item,
-            'work': self.work
+            'work': self.work,
         }
 
 
@@ -188,7 +192,7 @@ class TrainerSchedule(Base):
         primary_key=True,
         autoincrement=True,
     )
-    date: Mapped[str] = mapped_column(String)
+    date: Mapped[dt] = mapped_column(Date)
     time: Mapped[str] = mapped_column(String)
     trainer_id: Mapped[int] = mapped_column(
         BigInteger,
@@ -204,5 +208,5 @@ class TrainerSchedule(Base):
 
         return {
             'date': self.date,
-            'time': self.time
+            'time': self.time,
         }

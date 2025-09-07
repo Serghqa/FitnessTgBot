@@ -5,4 +5,5 @@ class StartSG(StatesGroup):
     client = State()
     group = State()
     main = State()
+    set_tz = State()
     trainer = State()

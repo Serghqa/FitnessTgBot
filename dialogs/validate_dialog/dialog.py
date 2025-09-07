@@ -1,23 +1,24 @@
 from aiogram import F
 
 from aiogram_dialog import Dialog, Window
-from aiogram_dialog.widgets.kbd import Button, Row, SwitchTo, Radio
+from aiogram_dialog.widgets.kbd import Button, Column, Row, Radio, SwitchTo
 from aiogram_dialog.widgets.input import TextInput
 from aiogram_dialog.widgets.text import Const, Format
 
 from operator import itemgetter
 
 from states import StartSG
-from .getters import get_data, get_radio_data
+from .getters import get_data, get_radio_data, get_timezones
 from .handlers import (
-    to_trainer_dialog,
-    to_client_dialog,
+    apply_tz,
+    client_is_valid,
+    error_code,
     is_trainer,
     is_client,
-    trainer_is_valid,
-    error_code,
-    client_is_valid,
     on_trainer,
+    to_client_dialog,
+    to_trainer_dialog,
+    trainer_is_valid,
 )
 
 
@@ -134,5 +135,34 @@ validate_dialog = Dialog(
         MAIN_MENU,
         state=StartSG.group,
         getter=get_radio_data,
+    ),
+    Window(
+        Const(
+            text='Укажите ваш часовой пояс, пожалуйста',
+        ),
+        Column(
+            Radio(
+                Format(
+                    text='☑️ {item[0]}',
+                ),
+                Format(
+                    text='⬜ {item[0]}',
+                ),
+                id='radio_tz',
+                item_id_getter=itemgetter(1),
+                items='radio_tz',
+            ),
+        ),
+        Button(
+            Const(
+                text='Подтвердить',
+                when='is_checked',
+            ),
+            id='is_tz',
+            on_click=apply_tz,
+        ),
+        MAIN_MENU,
+        state=StartSG.set_tz,
+        getter=get_timezones,
     ),
 )
