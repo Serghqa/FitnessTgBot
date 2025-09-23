@@ -44,7 +44,7 @@ from db import (
     TrainerSchedule,
     Workout,
 )
-from send_message import send_message
+from notification import send_notification
 from schemas import ScheduleSchema
 from states import ClientState
 from timezones import get_current_date
@@ -201,18 +201,16 @@ async def update_workouts(
 
     if workout.workouts != dialog_manager.start_data[WORKOUTS]:
         await callback.answer(
-            text='Данные были изменены!',
+            text='Количество тренировок было изменено!',
             show_alert=True,
         )
 
     dialog_manager.start_data[WORKOUTS] = workout.workouts
 
 
-async def set_calendar(
-    callback: CallbackQuery,
-    widget: SwitchTo | ManagedCalendar,
-    dialog_manager: DialogManager
-) -> None:
+async def _update_calendar(
+    dialog_manager: DialogManager,
+) -> dict:
 
     trainer_schedules: list[TrainerSchedule] = await get_trainer_schedules(
         dialog_manager=dialog_manager,
@@ -240,9 +238,20 @@ async def set_calendar(
                 if not data_schedules[iso_date]:
                     data_schedules.pop(iso_date)
 
+    return data_schedules
+
+
+async def set_calendar(
+    callback: CallbackQuery,
+    widget: SwitchTo | ManagedCalendar,
+    dialog_manager: DialogManager
+) -> None:
+
+    data_schedules: dict = await _update_calendar(dialog_manager)
+
     dialog_manager.dialog_data[SELECTED_DATES] = data_schedules
 
-    dialog_manager.dialog_data[MY_SIGN] = 0
+    dialog_manager.dialog_data[MY_SIGN] = 0  # color mark day
 
     await reset_radio(
         callback=callback,
@@ -258,38 +267,51 @@ async def on_date_selected(
     clicked_date: date
 ):
 
-    timezone: str = dialog_manager.start_data.get(TIME_ZONE)
-    today: datetime = get_current_date(timezone)
+    data_schedules: dict = await _update_calendar(dialog_manager)
+    selected_dates: dict = dialog_manager.dialog_data[SELECTED_DATES]
 
-    if clicked_date.isoformat() in dialog_manager.dialog_data[SELECTED_DATES]:
+    if data_schedules.keys() != selected_dates.keys():
 
-        if today.date() >= clicked_date:
+        dialog_manager.dialog_data[SELECTED_DATES] = data_schedules
+        await callback.message.answer(
+            text='Данные календаря были изменены, '
+            'попробуйте еще раз, пожалуйста'
+        )
 
-            await callback.answer(
-                text='Данные устарели, попробуйте еще раз, пожалуйста.',
-                show_alert=True,
-            )
-            await set_calendar(
-                callback=callback,
-                widget=widget,
-                dialog_manager=dialog_manager,
-            )
+    else:
 
-        else:
+        timezone: str = dialog_manager.start_data.get(TIME_ZONE)
+        today: datetime = get_current_date(timezone)
 
-            await update_workouts(
-                callback=callback,
-                dialog_manager=dialog_manager,
-                trainer_id=dialog_manager.start_data[TRAINER_ID],
-            )
+        if clicked_date.isoformat() in selected_dates:
 
-            dialog_manager.dialog_data[SELECTED_DATE] = \
-                clicked_date.isoformat()
+            if today.date() >= clicked_date:
 
-            await dialog_manager.switch_to(
-                state=ClientState.sign_training,
-                show_mode=ShowMode.EDIT,
-            )
+                await callback.answer(
+                    text='Данные устарели, попробуйте еще раз, пожалуйста.',
+                    show_alert=True,
+                )
+                await set_calendar(
+                    callback=callback,
+                    widget=widget,
+                    dialog_manager=dialog_manager,
+                )
+
+            else:
+
+                await update_workouts(
+                    callback=callback,
+                    dialog_manager=dialog_manager,
+                    trainer_id=dialog_manager.start_data[TRAINER_ID],
+                )
+
+                dialog_manager.dialog_data[SELECTED_DATE] = \
+                    clicked_date.isoformat()
+
+                await dialog_manager.switch_to(
+                    state=ClientState.sign_training,
+                    show_mode=ShowMode.EDIT,
+                )
 
 
 async def on_date(
@@ -298,6 +320,12 @@ async def on_date(
     dialog_manager: DialogManager,
     clicked_date: date
 ):
+
+    await set_client_trainings(
+        callback=callback,
+        widget=widget,
+        dialog_manager=dialog_manager,
+    )
 
     timezone: str = dialog_manager.start_data.get(TIME_ZONE)
     today: datetime = get_current_date(timezone)
@@ -377,11 +405,18 @@ async def exist_sign(
         time_=time_,
         trainer_id=trainer_id,
     )
+    trainer_schedules: list[TrainerSchedule] = await get_trainer_schedules(
+        dialog_manager=dialog_manager,
+        trainer_id=trainer_id,
+    )
 
     dialog_manager.dialog_data[EXIST] = schedule is None \
-        and today.date().isoformat() < date_
+        and today.date().isoformat() < date_ and any(
+            ts.date.isoformat() == date_ and (str(time_) in ts.time.split(','))
+            for ts in trainer_schedules
+        )
 
-    if schedule is None:
+    if dialog_manager.dialog_data[EXIST]:
         await add_training(
             dialog_manager=dialog_manager,
             date_=date_,
@@ -449,7 +484,7 @@ async def cancel_training(
         for item in items:
             time_: int = times[item]
 
-            await cancel_training_db(
+            result = await cancel_training_db(
                 dialog_manager=dialog_manager,
                 client_id=dialog_manager.event.from_user.id,
                 trainer_id=dialog_manager.start_data[TRAINER_ID],
@@ -457,14 +492,17 @@ async def cancel_training(
                 time_=time_,
             )
 
-            name = dialog_manager.event.from_user.full_name
-            text = f'❌{name} отменил(а) запись: {selected_date}, {time_}:00'
+            if result:
 
-            await send_message(
-                dialog_manager=dialog_manager,
-                user_id=dialog_manager.start_data[TRAINER_ID],
-                text=text,
-            )
+                name = dialog_manager.event.from_user.full_name
+                text = f'❌{name} отменил(а) запись: '\
+                    f'{selected_date}, {time_}:00'
+
+                await send_notification(
+                    bot=dialog_manager.event.bot,
+                    user_id=dialog_manager.start_data[TRAINER_ID],
+                    text=text,
+                )
 
         times = [t for i, t in enumerate(times) if i not in items]
         if times:

@@ -12,6 +12,10 @@ from aiogram_dialog import setup_dialogs
 
 from logging_setting import logging_config
 
+from nats.js.api import StreamConfig
+
+from nats_manager import NatsManager
+
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker,
@@ -73,9 +77,18 @@ async def main():
         token=config.tg_bot.TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
+
+    nats_manager = NatsManager(bot, config.nats.servers)
+    stream_config = StreamConfig(
+        name=config.nats_consumer.stream_name,
+        subjects=[config.nats_consumer.subject_name],
+        #storage='file',
+    )
+    nc, js = await nats_manager.connect(stream_config)
+
     dp = Dispatcher()
 
-    dp.update.middleware(DbSessionMiddleware(Session),)
+    dp.update.middleware(DbSessionMiddleware(Session))
 
     router: Router = dialogs.setup_all_dialogs(Router)
     router.callback_query.middleware(LoggingMiddleware())
@@ -86,7 +99,22 @@ async def main():
 
     await bot.delete_webhook(drop_pending_updates=True)
     await set_bot_commands(bot)
-    await dp.start_polling(bot)
+
+    try:
+        await asyncio.gather(
+            dp.start_polling(bot, nats_manager=nats_manager),
+            nats_manager.subscribe_to_notifications(
+                durable=config.nats_consumer.durable_name,
+                subject=config.nats_consumer.subject_name,
+                stream=config.nats_consumer.stream_name,
+            ),
+        )
+    except Exception as error:
+        logger.warning(error)
+    finally:
+        await nc.close()
+
+    #  await dp.start_polling(bot)
 
     logger.info('start polling')
 

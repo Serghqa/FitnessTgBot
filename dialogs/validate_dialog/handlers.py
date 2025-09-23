@@ -21,7 +21,7 @@ from db import (
     Trainer,
     Workout,
 )
-from send_message import send_message
+from notification import send_notification
 from schemas import ClientSchema, TrainerSchema
 from states import ClientState, StartSG, TrainerState
 
@@ -178,6 +178,8 @@ async def trainer_is_valid(
         text: str
 ):
 
+    await message.delete()
+
     await dialog_manager.switch_to(
         state=StartSG.set_tz,
         show_mode=ShowMode.EDIT,
@@ -201,6 +203,8 @@ async def client_is_valid(
     text: str
 ):
 
+    await message.delete()
+
     client: ClientSchema = set_user(
         dialog_manager=dialog_manager,
         schema=ClientSchema,
@@ -217,9 +221,9 @@ async def client_is_valid(
 
         text = f'Клиент {client.name} присоединился к группе'
 
-        await send_message(
-            dialog_manager=dialog_manager,
-            user_id=client.id,
+        await send_notification(
+            bot=dialog_manager.event.bot,
+            user_id=trainer_id,
             text=text,
         )
 

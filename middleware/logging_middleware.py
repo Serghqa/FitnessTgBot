@@ -36,6 +36,7 @@ class LoggingMiddleware(BaseMiddleware):
                     context.dialog_data,
                     context.state,
                     context.widget_data,
+
                 )
 
         return result

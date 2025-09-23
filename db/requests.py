@@ -4,11 +4,15 @@ from aiogram.types import CallbackQuery
 
 from aiogram_dialog import DialogManager
 
+from nats.js.client import JetStreamContext
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from datetime import datetime
+from datetime import datetime, timedelta
+
+from zoneinfo import ZoneInfo
 
 from db.models import (
     Client,
@@ -24,6 +28,7 @@ from db.models import (
     Workout,
     WorkingDay,
 )
+from nats_manager import NatsManager
 from schemas import ScheduleSchema
 from timezones import get_current_date
 
@@ -62,22 +67,30 @@ async def get_client_db(
     dialog_manager: DialogManager,
     client_id: int,
     trainer_id: int
-) -> Client | None:
+) -> dict:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
     stmt = (
-        select(Client, Trainer)
+        select(Client)
         .where(
-            Client.id == client_id,
-            Trainer.id == trainer_id,
+            Client.id == client_id
         )
         .options(selectinload(Client.workouts))
     )
 
-    result = await session.execute(stmt)
+    result = await session.scalar(stmt)
+    user_data = {}
 
-    return result.scalar_one_or_none()
+    if result is not None:
+
+        user_data.update(result.get_data())
+        for workout in result.workouts:
+            if workout.trainer_id == trainer_id:
+                user_data[WORKOUTS] = workout.workouts
+                user_data[WORKOUT] = 0
+
+    return user_data
 
 
 async def add_trainer(
@@ -390,6 +403,25 @@ async def add_training(
 
     await session.commit()
 
+    nats_manager: NatsManager = \
+        dialog_manager.middleware_data.get('nats_manager')
+    headers = {'User-Id': str(client_id)}
+    text = 'Test notification'
+    await nats_manager.publish_notification(
+        subject='subject.send.message',
+        headers=headers,
+        data_notification=text,
+    )
+
+    time_zone: str = dialog_manager.start_data.get(TIME_ZONE)
+    tz: ZoneInfo = ZoneInfo(time_zone)
+
+    today: datetime = \
+        datetime.now(tz).replace(minute=0, second=0, microsecond=0)
+    training_date: datetime = dt.replace(hour=time_).astimezone(tz)
+
+    td: timedelta = training_date - today
+
     return schedule
 
 
@@ -399,7 +431,7 @@ async def cancel_training_db(
     trainer_id: int,
     date_: str,
     time_: int
-):
+) -> bool:
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
@@ -412,24 +444,25 @@ async def cancel_training_db(
         .options(selectinload(Client.workouts))
     )
 
-    result = await session.execute(stmt)
-    if result:
-        client: Client = result.scalar()
-
-        for workout in client.workouts:  # Workout
-            if workout.trainer_id == trainer_id:
-                workout.workouts += 1
-                dialog_manager.start_data[WORKOUTS] = workout.workouts
-                break
+    client: Client = await session.scalar(stmt)
+    if client is not None:
 
         for schedule in client.schedules:  # Schedule
             if (schedule.trainer_id == trainer_id
                 and schedule.date == dt.date()
                     and schedule.time == time_):
-                await session.delete(schedule)
-                break
 
-        await session.commit()
+                await session.delete(schedule)
+
+                for workout in client.workouts:  # Workout
+                    if workout.trainer_id == trainer_id:
+                        workout.workouts += 1
+                        dialog_manager.start_data[WORKOUTS] = workout.workouts
+
+                        await session.commit()
+                        return True
+
+        return False
 
 
 async def get_clients_training(

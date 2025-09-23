@@ -8,7 +8,7 @@ from aiogram_dialog.widgets.kbd import Button, SwitchTo
 
 from db import get_workouts, update_workouts, Workout
 from schemas import ClientSchema
-from send_message import send_message
+from notification import send_notification
 
 
 logger = logging.getLogger(__name__)
@@ -58,8 +58,8 @@ async def workout_apply(
         f'теперь у вас {workouts}'
     )
 
-    await send_message(
-        dialog_manager=dialog_manager,
+    await send_notification(
+        bot=dialog_manager.event.bot,
         user_id=user_id,
         text=text,
     )

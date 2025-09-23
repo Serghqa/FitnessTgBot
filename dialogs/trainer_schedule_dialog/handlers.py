@@ -44,7 +44,7 @@ from db import (
     update_working_day,
 )
 from schemas import SelectedDateSchema, WorkDaySchema
-from send_message import send_message
+from notification import send_notification
 from states import TrainerScheduleStates
 from timezones import get_current_date
 
@@ -353,25 +353,27 @@ async def cancel_training(
             dialog_manager.dialog_data[SELECTED_DATE][TRAININGS]
 
         for item in items:
-            client: dict = trainings[int(item)]
-            await cancel_training_db(
+            data_training: dict = trainings[int(item)]
+            result = await cancel_training_db(
                 dialog_manager=dialog_manager,
-                client_id=client[CLIENT_ID],
-                trainer_id=client[TRAINER_ID],
-                date_=client[DATE],
-                time_=client[TIME],
+                client_id=data_training[CLIENT_ID],
+                trainer_id=data_training[TRAINER_ID],
+                date_=data_training[DATE],
+                time_=data_training[TIME],
             )
 
-            text = (
-                f'Ваше занятие в группе {client[TRAINER_ID]} '
-                f'{client[DATE]} в {client[TIME]}:00 отменено.'
-            )
+            if result:
 
-            await send_message(
-                dialog_manager=dialog_manager,
-                user_id=client[CLIENT_ID],
-                text=text,
-            )
+                text = (
+                    f'Ваше занятие в группе {data_training[TRAINER_ID]} '
+                    f'{data_training[DATE]} в {data_training[TIME]}:00 отменено.'
+                )
+
+                await send_notification(
+                    bot=dialog_manager.event.bot,
+                    user_id=data_training[CLIENT_ID],
+                    text=text,
+                )
 
         trainings: list[dict] = [
             training for i, training in enumerate(trainings)
@@ -413,7 +415,7 @@ async def cancel_work(
             dialog_manager.dialog_data[SELECTED_DATE][TRAININGS]
 
         for training in trainings:
-            await cancel_training_db(
+            result = await cancel_training_db(
                 dialog_manager=dialog_manager,
                 client_id=training[CLIENT_ID],
                 trainer_id=training[TRAINER_ID],
@@ -421,16 +423,17 @@ async def cancel_work(
                 time_=training[TIME],
             )
 
-            text = (
-                f'Ваше занятие в группе {training[TRAINER_ID]} '
-                f'{training[DATE]} в {training[TIME]}:00 отменено.'
-            )
+            if result:
+                text = (
+                    f'Ваше занятие в группе {training[TRAINER_ID]} '
+                    f'{training[DATE]} в {training[TIME]}:00 отменено.'
+                )
 
-            await send_message(
-                dialog_manager=dialog_manager,
-                user_id=training[CLIENT_ID],
-                text=text,
-            )
+                await send_notification(
+                    bot=dialog_manager.event.bot,
+                    user_id=training[CLIENT_ID],
+                    text=text,
+                )
 
         await cancel_trainer_schedule(
             dialog_manager=dialog_manager,

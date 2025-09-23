@@ -10,7 +10,6 @@ from aiogram_dialog.widgets.kbd import Button, ManagedRadio, Select, SwitchTo
 from typing import Any
 
 from db import (
-    Client,
     get_client_db,
     get_group,
     get_work_days,
@@ -60,16 +59,13 @@ async def get_client(
 
     elif message.text.isdigit():
 
-        client_db: Client | None = await get_client_db(
+        user_data: dict = await get_client_db(
             dialog_manager=dialog_manager,
             client_id=int(message.text),
             trainer_id=dialog_manager.event.from_user.id,
         )
 
-        if client_db is not None:
-            user_data: dict = client_db.get_data()
-            user_data[WORKOUT] = 0
-            user_data[WORKOUTS] = client_db.workouts
+        if user_data:
 
             await dialog_manager.start(
                 state=ClientEditState.main,
