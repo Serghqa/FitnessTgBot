@@ -7,14 +7,11 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.types import BotCommand
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-
 from aiogram_dialog import setup_dialogs
 
+from logging import Logger
+
 from logging_setting import logging_config
-
-from nats.js.api import StreamConfig
-
-from nats_manager import NatsManager
 
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -22,9 +19,29 @@ from sqlalchemy.ext.asyncio import (
     AsyncEngine
 )
 
+from taskiq_redis import RedisScheduleSource
+from taskiq.scheduler.scheduled_task import ScheduledTask
+
 from config import load_config, Config
 from db import Base
+from taskiq_broker import broker, schedule_source
+from tasks import clear_old_data
 from middleware import DbSessionMiddleware, LoggingMiddleware
+
+
+def setting_logging(config: dict) -> Logger:
+
+    logging.config.dictConfig(config)
+    logging.getLogger('aiogram.event').setLevel(logging.WARNING)
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
+    logger = logging.getLogger(__name__)
+    logger.info('Настройка логов завершена')
+
+    return logger
+
+
+logger: Logger = setting_logging(logging_config)
 
 
 async def set_bot_commands(bot: Bot):
@@ -45,79 +62,117 @@ async def set_bot_commands(bot: Bot):
 
 async def create_tables(engine: AsyncEngine):
 
+    logger.info('Запуск процесса создания таблиц базы данных')
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
+        logger.info('Таблицы успешно созданны')
 
-async def main():
 
-    logging.config.dictConfig(logging_config)
-    logging.getLogger('aiogram.event').setLevel(logging.WARNING)
-    logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+async def set_delete_old_data(source: RedisScheduleSource) -> None:
 
-    logger = logging.getLogger(__name__)
+    scheduled_tasks: list[ScheduledTask] = await source.get_schedules()
 
-    config: Config = load_config()
+    for scheduled_task in scheduled_tasks:
+        if scheduled_task.task_name == clear_old_data.task_name:
+            await source.delete_schedule(scheduled_task.schedule_id)
+            logger.info('Задача очистки данных отменена')
+
+    await schedule_source.add_schedule(
+        ScheduledTask(
+            task_name=clear_old_data.task_name,
+            labels={},
+            args=[],
+            kwargs={},
+            schedule_id=f'{clear_old_data.task_name}_id',
+            cron='*/1 * * * *',
+        )
+    )
+    logger.info('Периодическая очистка данных настроена')
+
+
+def create_engine(config: Config) -> AsyncEngine:
 
     engine: AsyncEngine = create_async_engine(
         url=(
-            f'postgresql+psycopg://'
+            f'postgresql+asyncpg://'
             f'{config.data_base.NAME}:{config.data_base.PASSWORD}@'
             f'{config.data_base.HOST}/fitness'
         ),
         echo=False,
     )
 
-    await create_tables(engine=engine)
+    logger.info('Движок AsyncEngine успешно создан')
 
-    Session = async_sessionmaker(engine, expire_on_commit=False)
+    return engine
 
-    bot = Bot(
-        token=config.tg_bot.TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-    )
 
-    nats_manager = NatsManager(bot, config.nats.servers)
-    stream_config = StreamConfig(
-        name=config.nats_consumer.stream_name,
-        subjects=[config.nats_consumer.subject_name],
-        #storage='file',
-    )
-    nc, js = await nats_manager.connect(stream_config)
+def create_async_sessionmaker(engine: AsyncEngine) -> async_sessionmaker:
 
-    dp = Dispatcher()
+    logger.info('AsyncSession получен')
 
-    dp.update.middleware(DbSessionMiddleware(Session))
+    return async_sessionmaker(engine, expire_on_commit=False)
+
+
+def setting_dispatcher(dispatcher: Dispatcher) -> None:
+
+    dispatcher.update.middleware(DbSessionMiddleware(Session))
 
     router: Router = dialogs.setup_all_dialogs(Router)
     router.callback_query.middleware(LoggingMiddleware())
     router.message.middleware(LoggingMiddleware())
 
-    dp.include_routers(router)
-    setup_dialogs(dp)
+    dispatcher.include_routers(router)
+    setup_dialogs(dispatcher)
 
-    await bot.delete_webhook(drop_pending_updates=True)
+    logger.info('Dispatcher успешно настроен')
+
+
+config: Config = load_config()
+engine: AsyncEngine = create_engine(config)
+Session = create_async_sessionmaker(engine)
+broker.add_dependency_context({'session': Session})
+
+dp = Dispatcher()
+setting_dispatcher(dispatcher=dp)
+
+bot = Bot(
+    token=config.tg_bot.TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+)
+
+
+@dp.startup()
+async def setup_taskiq():
+    if not broker.is_worker_process:
+        logger.info('Настройка taskiq завершена')
+        await broker.startup()
+
+
+@dp.shutdown()
+async def shutdown_taskiq():
+    if not broker.is_worker_process:
+        logger.info('Завершение работы taskiq')
+        await broker.shutdown()
+
+
+async def main():
+
+    await create_tables(engine=engine)
+    await set_delete_old_data(schedule_source)
+
     await set_bot_commands(bot)
-
-    try:
-        await asyncio.gather(
-            dp.start_polling(bot, nats_manager=nats_manager),
-            nats_manager.subscribe_to_notifications(
-                durable=config.nats_consumer.durable_name,
-                subject=config.nats_consumer.subject_name,
-                stream=config.nats_consumer.stream_name,
-            ),
-        )
-    except Exception as error:
-        logger.warning(error)
-    finally:
-        await nc.close()
-
-    #  await dp.start_polling(bot)
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
     logger.info('start polling')
 
+
 if __name__ == '__main__':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()) #  Убрать при деплое
+    # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()) #  Убрать при деплое
     asyncio.run(main())
+
+    # taskiq worker taskiq_broker.broker:broker -fsd
+    # taskiq scheduler taskiq_broker.broker:scheduler -fsd

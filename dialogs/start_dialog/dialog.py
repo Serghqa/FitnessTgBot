@@ -15,7 +15,6 @@ from db import Client, get_user, Trainer
 from schemas import ClientSchema, TrainerSchema
 from states import StartSG
 
-
 logger = logging.getLogger(__name__)
 
 start_router = Router()

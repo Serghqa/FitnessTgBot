@@ -4,15 +4,11 @@ from aiogram.types import CallbackQuery
 
 from aiogram_dialog import DialogManager
 
-from nats.js.client import JetStreamContext
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from datetime import datetime, timedelta
-
-from zoneinfo import ZoneInfo
+from datetime import datetime
 
 from db.models import (
     Client,
@@ -28,7 +24,6 @@ from db.models import (
     Workout,
     WorkingDay,
 )
-from nats_manager import NatsManager
 from schemas import ScheduleSchema
 from timezones import get_current_date
 
@@ -402,25 +397,6 @@ async def add_training(
     session.add(schedule)
 
     await session.commit()
-
-    nats_manager: NatsManager = \
-        dialog_manager.middleware_data.get('nats_manager')
-    headers = {'User-Id': str(client_id)}
-    text = 'Test notification'
-    await nats_manager.publish_notification(
-        subject='subject.send.message',
-        headers=headers,
-        data_notification=text,
-    )
-
-    time_zone: str = dialog_manager.start_data.get(TIME_ZONE)
-    tz: ZoneInfo = ZoneInfo(time_zone)
-
-    today: datetime = \
-        datetime.now(tz).replace(minute=0, second=0, microsecond=0)
-    training_date: datetime = dt.replace(hour=time_).astimezone(tz)
-
-    td: timedelta = training_date - today
 
     return schedule
 

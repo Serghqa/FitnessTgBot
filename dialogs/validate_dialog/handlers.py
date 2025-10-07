@@ -8,8 +8,11 @@ from aiogram_dialog.widgets.kbd import Button
 from aiogram_dialog.widgets.input import ManagedTextInput
 
 from functools import wraps
+
 from string import ascii_lowercase, digits
+
 from timezones import get_time_zones
+
 from typing import Callable
 
 #  from config import load_config, Config
