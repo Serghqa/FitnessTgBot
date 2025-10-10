@@ -27,8 +27,3 @@ async def get_data_group(dialog_manager: DialogManager, **kwargs):
     ]
 
     return {GROUP: group, RADIO: [('FREE', 1), ('ᴠɪᴘ', 2)]}
-
-
-async def message_data(dialog_manager: DialogManager, **kwargs):
-
-    return {RADIO: [('Всем', 1), ('Активные', 2)]}

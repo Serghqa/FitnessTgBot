@@ -245,18 +245,6 @@ async def to_schedule_dialog(
     )
 
 
-async def set_radio_message(
-        callback: CallbackQuery,
-        widget: SwitchTo,
-        dialog_manager: DialogManager
-):
-
-    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_MESS)
-
-    radio: ManagedRadio = dialog_manager.find(RADIO_MESS)
-    await radio.set_checked(widget_item)
-
-
 async def send_message(
         message: Message,
         widget: MessageInput,

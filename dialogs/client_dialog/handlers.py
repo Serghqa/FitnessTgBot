@@ -28,7 +28,9 @@ from aiogram_dialog.widgets.text import Format, Text
 
 from babel.dates import get_day_names, get_month_names
 
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
+
+from taskiq.scheduler.scheduled_task import ScheduledTask
 
 from zoneinfo import ZoneInfo
 
@@ -47,6 +49,8 @@ from db import (
 from notification import send_notification
 from schemas import ScheduleSchema
 from states import ClientState
+from tasks import send_scheduled_notification
+from taskiq_broker import schedule_source
 from timezones import get_current_date
 
 
@@ -424,6 +428,33 @@ async def exist_sign(
             trainer_id=trainer_id,
             time_=time_,
         )
+
+        date_notification = datetime.combine(
+            date=date.fromisoformat(date_)-timedelta(days=1),
+            time=time(hour=19, minute=30, tzinfo=ZoneInfo(timezone)),
+        )
+
+        if date_notification > today:
+
+            message = f'Напоминание о тренировке {date_} в {time_}:00'
+
+            await schedule_source.add_schedule(
+                ScheduledTask(
+                    task_name=send_scheduled_notification.task_name,
+                    labels={},
+                    args=[],
+                    kwargs={'chat_id': client_id, 'message_text': message},
+                    schedule_id=f'{client_id}_{date_}_{time_}',
+                    time=date_notification,
+                )
+            )
+
+            logger.info(
+                'Задача об упоминании о тренировке запланирована '
+                'на дату <%s>, время <%s>',
+                date_notification.date().isoformat(),
+                date_notification.time().isoformat()
+            )
 
 
 async def set_client_trainings(

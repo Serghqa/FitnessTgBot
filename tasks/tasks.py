@@ -16,7 +16,7 @@ from taskiq_broker import broker
 logger = logging.getLogger(__name__)
 
 
-@broker.task()
+@broker.task(task_name='send_scheduled_notification')
 async def send_scheduled_notification(
     chat_id: int,
     message_text: str,
@@ -42,7 +42,7 @@ async def clear_old_data(context: Annotated[Context, TaskiqDepends()]):
 
         stmt = (
             select(Schedule)
-            .where(Schedule.date < date_)
+            .where(Schedule.date > date_)
         )
         result = await session.execute(stmt)
         for schedule in result.scalars():
@@ -51,9 +51,11 @@ async def clear_old_data(context: Annotated[Context, TaskiqDepends()]):
 
         stmt = (
             select(TrainerSchedule)
-            .where(TrainerSchedule.date < date_)
+            .where(TrainerSchedule.date > date_)
         )
         result = await session.execute(stmt)
         for trainer_schedule in result.scalars():
             await session.delete(trainer_schedule)
         logger.info('Устаревшие данные из таблицы TrainerSchedule очищены')
+
+        await session.commit()

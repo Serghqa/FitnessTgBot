@@ -14,7 +14,7 @@ from aiogram.enums import ContentType
 from operator import itemgetter
 
 from states import TrainerState
-from .getters import get_data, get_data_group, message_data
+from .getters import get_data, get_data_group
 from .handlers import (
     back_page,
     get_client,
@@ -22,9 +22,7 @@ from .handlers import (
     on_client,
     process_result,
     render_group,
-    send_message,
     set_frame,
-    set_radio_message,
     to_main_window,
     to_schedule_dialog,
 )
@@ -50,12 +48,6 @@ trainer_dialog = Dialog(
             on_click=set_frame,
             state=TrainerState.group,
         ),
-        SwitchTo(
-            text=Const('Сделать объявление'),
-            id='send_mess',
-            on_click=set_radio_message,
-            state=TrainerState.message,
-        ),
         Button(
             text=Const('Рассписание'),
             id='to_sched',
@@ -63,30 +55,6 @@ trainer_dialog = Dialog(
         ),
         getter=get_data,
         state=TrainerState.main,
-    ),
-    #  Окно отправки объявления
-    Window(
-        Const(
-            text='Отправить файл или текст',
-        ),
-        Radio(
-            Format(
-                text='☑️ {item[0]}'
-            ),
-            Format(
-                text='⬜ {item[0]}'
-            ),
-            id='radio_mess',
-            item_id_getter=itemgetter(1),
-            items='radio',
-        ),
-        MessageInput(
-            func=send_message,
-            content_types=ContentType.ANY,
-        ),
-        MAIN_MENU,
-        getter=message_data,
-        state=TrainerState.message,
     ),
     #  Окно группы
     Window(

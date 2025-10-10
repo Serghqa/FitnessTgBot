@@ -4,14 +4,16 @@ import logging
 import logging.config
 
 from aiogram import Bot, Dispatcher, Router
+from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
 from aiogram.types import BotCommand
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+
 from aiogram_dialog import setup_dialogs
 
 from logging import Logger
 
-from logging_setting import logging_config
+from redis.asyncio import Redis
 
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -20,13 +22,15 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from taskiq_redis import RedisScheduleSource
+
 from taskiq.scheduler.scheduled_task import ScheduledTask
 
 from config import load_config, Config
 from db import Base
+from logging_setting import logging_config
+from middleware import DbSessionMiddleware, LoggingMiddleware
 from taskiq_broker import broker, schedule_source
 from tasks import clear_old_data
-from middleware import DbSessionMiddleware, LoggingMiddleware
 
 
 def setting_logging(config: dict) -> Logger:
@@ -87,7 +91,8 @@ async def set_delete_old_data(source: RedisScheduleSource) -> None:
             args=[],
             kwargs={},
             schedule_id=f'{clear_old_data.task_name}_id',
-            cron='*/1 * * * *',
+            cron='0 3 1 * 6',  # каждый месяц 1 числа в воскресенье в 3:00
+            # cron='3 15 * * *',
         )
     )
     logger.info('Периодическая очистка данных настроена')
@@ -135,7 +140,12 @@ engine: AsyncEngine = create_engine(config)
 Session = create_async_sessionmaker(engine)
 broker.add_dependency_context({'session': Session})
 
-dp = Dispatcher()
+redis = Redis(host='localhost')
+storage = RedisStorage(
+    redis=redis,
+    key_builder=DefaultKeyBuilder(with_destiny=True)
+)
+dp = Dispatcher(storage=storage)
 setting_dispatcher(dispatcher=dp)
 
 bot = Bot(
