@@ -102,7 +102,7 @@ async def add_trainer(
     for item in range(1, 4):
         trainer.working_days.append(
             set_work_day(
-                item=item,
+                item=str(item),
                 work=','.join(map(str, range(9, 18+item))),
                 trainer_id=id,
             )
@@ -268,15 +268,15 @@ async def get_work_days(
         .options(selectinload(Trainer.working_days))
     )
 
-    result = await session.scalar(stmt)
-    working_days: list[WorkingDay] = result.working_days
+    trainer: Trainer = await session.scalar(stmt)
+    working_days: list[WorkingDay] = trainer.working_days
 
     return working_days
 
 
 async def update_working_day(
     dialog_manager: DialogManager,
-    id: int,
+    id: str,
     value: str
 ):
 

@@ -35,7 +35,7 @@ async def selection_getter(dialog_manager: DialogManager, **kwargs):
 
     is_apply: bool = any(
         item for item in dialog_manager.dialog_data[SELECTED_DATES].values()
-        if isinstance(item, int)
+        if isinstance(item, str)
     )
 
     return {
@@ -57,7 +57,7 @@ async def get_multiselect_data(dialog_manager: DialogManager, **kwargs):
 
 async def get_data_radio(dialog_manager: DialogManager, **kwargs):
 
-    marks = {1: '🟢', 2: '🔵', 3: '🟣'}
+    marks = {'1': '🟢', '2': '🔵', '3': '🟣'}
 
     data = [
         (format_schedule(work), id, marks[id]) for id, work in

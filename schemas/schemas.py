@@ -32,22 +32,28 @@ class TrainerSchema(UserSchema):
 
 class WorkDaySchema(BaseModel):
 
-    item: int = Field(ge=1, le=3)
+    item: str
     work: str
 
     @model_validator(mode='after')
     def is_work(self):
-        for item in self.work.split(','):  # str
-            if item.isdigit() and 0 < int(item) < 24:
+        for work_item in self.work.split(','):  # str
+            if work_item.isdigit() and -1 < int(work_item) < 24:
                 continue
-            raise ValueError('Work is not valid')
+            raise ValueError('work is not valid')
         return self
+
+    @model_validator(mode='after')
+    def is_item(self):
+        if self.item.isdigit() and 0 < int(self.item) < 4:
+            return self
+        raise ValueError('item is not valid')
 
 
 class SelectedDateSchema(BaseModel):
 
-    start: int = Field(ge=0, le=23)
-    stop: int = Field(ge=0, le=23)
+    start: str
+    stop: str
     breaks: str
 
     @model_validator(mode='after')

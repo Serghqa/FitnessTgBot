@@ -32,7 +32,7 @@ from datetime import date, datetime
 
 from zoneinfo import ZoneInfo
 
-from typing import Any, Callable, Literal, TypeVar
+from typing import Callable, Literal, TypeVar
 
 from db import (
     add_trainer_schedule,
@@ -99,8 +99,8 @@ class MarkedDay(Text):
 
         if serial_date in selected:
             radio_item = selected[serial_date]
-            if isinstance(radio_item, int):
-                return self.mark[radio_item]
+            if isinstance(radio_item, str):
+                return self.mark[int(radio_item)]
             return '🔴'
 
         return await self.other.render_text(data, dialog_manager)
@@ -200,7 +200,7 @@ def _get_curent_widget_context(
     dialog_manager: DialogManager,
     key: str,
     default='1'
-) -> Any:
+) -> str | list[str]:
 
     context: Context = dialog_manager.current_context()
     widget_data = context.widget_data.get(key, default)
@@ -213,7 +213,7 @@ def _get_sortred_items(work: str) -> list[int]:
     return sorted(map(int, work.split(',')))
 
 
-def _transform_time(time_: str) -> dict[str, int | str]:
+def _transform_time(time_: str) -> dict[str, str]:
 
     items: list[int] = sorted(map(int, time_.split(',')))
     start, stop = min(items), max(items)
@@ -221,7 +221,7 @@ def _transform_time(time_: str) -> dict[str, int | str]:
         str(item) for item in range(start, stop+1) if item not in items
     ) or 'нет'
 
-    return {'start': start, 'stop': stop, 'breaks': breaks}
+    return {'start': str(start), 'stop': str(stop), 'breaks': breaks}
 
 
 async def on_date_selected(
@@ -244,12 +244,12 @@ async def on_date_selected(
 
         if serial_date in selected:
 
-            if isinstance(selected[serial_date], int):
+            if isinstance(selected[serial_date], str):
 
                 selected.pop(serial_date)
             else:
 
-                selected_data: dict[str, int | str] = \
+                selected_data: dict[str, str] = \
                     SelectedDateSchema(**selected[serial_date]).model_dump()
 
                 trainings: list[dict] = await get_clients_training(
@@ -275,7 +275,7 @@ async def on_date_selected(
                     key=RADIO_WORK,
                 )
 
-            selected[serial_date] = int(widget_item)
+            selected[serial_date] = widget_item
 
 
 async def revoke(
@@ -366,7 +366,8 @@ async def cancel_training(
 
                 text = (
                     f'Ваше занятие в группе {data_training[TRAINER_ID]} '
-                    f'{data_training[DATE]} в {data_training[TIME]}:00 отменено.'
+                    f'{data_training[DATE]} в '
+                    f'{data_training[TIME]}:00 отменено.'
                 )
 
                 await send_notification(
@@ -449,7 +450,7 @@ async def cancel_work(
 
 async def apply_selected(
     callback: CallbackQuery,
-    widget: SwitchTo,
+    widget: Button,
     dialog_manager: DialogManager
 ):
 
@@ -460,7 +461,7 @@ async def apply_selected(
 
     now_selected: dict = {
         date_: item for date_, item in selected_dates.items()
-        if isinstance(item, int) and today.date().isoformat() < date_
+        if isinstance(item, str) and today.date().isoformat() < date_
     }
 
     if now_selected:
@@ -482,7 +483,7 @@ async def set_radio_work(
 ):
 
     radio: ManagedRadio = dialog_manager.find(RADIO_WORK)
-    widget_item: str = _get_curent_widget_context(
+    widget_item: Literal['1', '2', '3'] = _get_curent_widget_context(
         dialog_manager=dialog_manager,
         key=RADIO_WORK
     )
@@ -497,7 +498,8 @@ async def set_radio_calendar(
 ):
 
     radio: ManagedRadio = dialog_manager.find(RADIO_WORK)
-    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
+    widget_item: Literal['1', '2', '3'] = \
+        _get_curent_widget_context(dialog_manager, RADIO_WORK)
 
     await radio.set_checked(widget_item)
 
@@ -516,18 +518,18 @@ async def set_checked(
     dialog_manager: DialogManager
 ):
 
-    widget_item: str = _get_curent_widget_context(
+    widget_item: Literal['1', '2', '3'] = _get_curent_widget_context(
         dialog_manager=dialog_manager,
         key=RADIO_WORK,
     )
 
     await _set_checked(
         dialog_manager=dialog_manager,
-        id=int(widget_item)
+        id=widget_item
     )
 
 
-async def _set_checked(dialog_manager: DialogManager, id: int):
+async def _set_checked(dialog_manager: DialogManager, id: str):
 
     work: str = dialog_manager.start_data[SCHEDULES][id]
     multiselect: CustomMultiselect = dialog_manager.find(SEL)
@@ -544,7 +546,7 @@ async def process_selection(
 ):
 
     items: list[int] = \
-        _get_sortred_items(dialog_manager.start_data[SCHEDULES][int(item_id)])
+        _get_sortred_items(dialog_manager.start_data[SCHEDULES][item_id])
     breaks = \
         ','.join(
             [str(i) for i in range(items[0], items[-1]) if i not in items]
@@ -573,14 +575,15 @@ async def apply_work(
     dialog_manager: DialogManager
 ):
 
-    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
+    widget_item: Literal['1', '2', '3'] = \
+        _get_curent_widget_context(dialog_manager, RADIO_WORK)
     widget_data: list[str] = _get_curent_widget_context(dialog_manager, SEL)
     selected: list[int] = sorted(map(int, widget_data))
 
     work = ','.join(map(str, selected))
 
     work_schema: WorkDaySchema = WorkDaySchema(
-        item=int(widget_item),
+        item=widget_item,
         work=work,
     )
 
@@ -615,7 +618,7 @@ async def process_result(
 
     widget_data = {}
 
-    widget_item: str = _get_curent_widget_context(
+    widget_item: Literal['1', '2', '3'] = _get_curent_widget_context(
         dialog_manager=dialog_manager,
         key=RADIO_WORK,
     )

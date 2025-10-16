@@ -7,7 +7,7 @@ from aiogram_dialog.api.entities.context import Context
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, ManagedRadio, Select, SwitchTo
 
-from typing import Any
+from typing import Literal
 
 from db import (
     get_client_db,
@@ -40,7 +40,7 @@ def _get_curent_widget_context(
     dialog_manager: DialogManager,
     key: str,
     default='1'
-) -> Any:
+) -> str:
 
     context: Context = dialog_manager.current_context()
     widget_data = context.widget_data.get(key, default)
@@ -112,7 +112,8 @@ async def _set_radio_group(
     dialog_manager: DialogManager
 ):
 
-    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_GROUP)
+    widget_item: Literal['1', '2', '3'] = \
+        _get_curent_widget_context(dialog_manager, RADIO_GROUP)
 
     radio: ManagedRadio = dialog_manager.find(RADIO_GROUP)
     await radio.set_checked(widget_item)
@@ -222,7 +223,9 @@ async def to_schedule_dialog(
     dialog_manager: DialogManager
 ):
 
-    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_WORK)
+    widget_item: Literal['1', '2', '3'] = \
+        _get_curent_widget_context(dialog_manager, RADIO_WORK)
+
     work_days: list[WorkingDay] = \
         await get_work_days(dialog_manager)
     timezone: str = dialog_manager.start_data.get(TIME_ZONE)
@@ -231,7 +234,7 @@ async def to_schedule_dialog(
 
     for work_day in work_days:
         valid_day: WorkDaySchema = WorkDaySchema(**work_day.get_data())
-        item: int = valid_day.item
+        item: str = valid_day.item
         work: str = valid_day.work
 
         data[SCHEDULES][item] = work
@@ -243,31 +246,6 @@ async def to_schedule_dialog(
         state=TrainerScheduleStates.main,
         show_mode=ShowMode.EDIT,
     )
-
-
-async def send_message(
-        message: Message,
-        widget: MessageInput,
-        dialog_manager: DialogManager
-):
-
-    widget_item: str = _get_curent_widget_context(dialog_manager, RADIO_MESS)
-
-    dialog_manager.dialog_data.update(
-        {
-            OFFSET: 0,
-            LIMIT: 5
-        }
-    )
-
-    if widget_item == '2':
-        group: list[dict] = await get_group(dialog_manager, False)
-
-    else:
-        group: list[dict] = await get_group(dialog_manager)
-
-    for user in group:
-        print(user)
 
 
 async def process_result(

@@ -163,7 +163,7 @@ class WorkingDay(Base):
         primary_key=True,
         autoincrement=True,
     )
-    item: Mapped[int] = mapped_column(Integer)
+    item: Mapped[str] = mapped_column(String)
     work: Mapped[str] = mapped_column(String)
     trainer_id: Mapped[int] = mapped_column(
         BigInteger,
