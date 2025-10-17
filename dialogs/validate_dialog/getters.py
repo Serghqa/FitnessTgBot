@@ -7,10 +7,10 @@ from datetime import datetime
 
 from zoneinfo import ZoneInfo
 
-from db import Trainer
 from timezones import get_time_zones
 
 
+NAME = 'name'
 IS_CHECKED = 'is_checked'
 RADIO = 'radio'
 RADIO_GROUP = 'radio_group'
@@ -50,11 +50,11 @@ async def get_radio_data(dialog_manager: DialogManager, **kwargs):
         key=RADIO_GROUP,
     )
 
-    trainers: list[Trainer] = dialog_manager.dialog_data[TRAINERS]
+    trainers: list[dict] = dialog_manager.dialog_data[TRAINERS]
 
     return {
         IS_CHECKED: is_checked,
-        RADIO: [(trainer.name, i) for i, trainer in enumerate(trainers)]
+        RADIO: [(trainer[NAME], i) for i, trainer in enumerate(trainers)]
     }
 
 

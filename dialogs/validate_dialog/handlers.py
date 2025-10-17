@@ -99,7 +99,8 @@ async def to_client_dialog(
         )
 
     else:
-        dialog_manager.dialog_data[TRAINERS] = trainers
+        dialog_manager.dialog_data[TRAINERS] = \
+            [trainer.get_data() for trainer in trainers]
 
         await dialog_manager.switch_to(
             state=StartSG.group,
@@ -117,9 +118,9 @@ async def on_trainer(
 
     radio_checked: str = context.widget_data.get(RADIO_GROUP)
 
-    trainer_db: Trainer = \
+    trainer_db: dict = \
         dialog_manager.dialog_data[TRAINERS][int(radio_checked)]
-    trainer: TrainerSchema = TrainerSchema(**trainer_db.get_data())
+    trainer: TrainerSchema = TrainerSchema(**trainer_db)
 
     workout: Workout = await get_workouts(
         dialog_manager=dialog_manager,
