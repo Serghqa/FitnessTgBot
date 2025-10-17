@@ -44,6 +44,7 @@ from db import (
     update_working_day,
 )
 from schemas import SelectedDateSchema, WorkDaySchema
+from taskiq_broker import schedule_source
 from notification import send_notification
 from states import TrainerScheduleStates
 from timezones import get_current_date
@@ -187,6 +188,20 @@ class CustomMultiselect(Multiselect):
                 row = []
 
         return keyboard
+
+
+async def _cancel_schedule_task(
+    client_id: int,
+    date: str,
+    time: int
+) -> None:
+
+    schedule_task_id = f'{client_id}_{date}_{time}'
+
+    await schedule_source.delete_schedule(schedule_task_id)
+    logger.info(
+        'Задача об уведомлении id=%s отменена', schedule_task_id
+    )
 
 
 def _update_selected_dates(selected: dict, today: str) -> None:
@@ -376,6 +391,12 @@ async def cancel_training(
                     text=text,
                 )
 
+                await _cancel_schedule_task(
+                    client_id=data_training[CLIENT_ID],
+                    date=data_training[DATE],
+                    time=data_training[TIME],
+                )
+
         trainings: list[dict] = [
             training for i, training in enumerate(trainings)
             if str(i) not in items
@@ -434,6 +455,12 @@ async def cancel_work(
                     bot=dialog_manager.event.bot,
                     user_id=training[CLIENT_ID],
                     text=text,
+                )
+
+                await _cancel_schedule_task(
+                    client_id=training[CLIENT_ID],
+                    date=training[DATE],
+                    time=training[TIME],
                 )
 
         await cancel_trainer_schedule(

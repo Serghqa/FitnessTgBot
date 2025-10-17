@@ -431,7 +431,7 @@ async def exist_sign(
 
         date_notification = datetime.combine(
             date=date.fromisoformat(date_)-timedelta(days=1),
-            time=time(hour=19, minute=30, tzinfo=ZoneInfo(timezone)),
+            time=time(hour=12, minute=00, tzinfo=ZoneInfo(timezone)),
         )
 
         if date_notification > today:
@@ -533,6 +533,15 @@ async def cancel_training(
                     bot=dialog_manager.event.bot,
                     user_id=dialog_manager.start_data[TRAINER_ID],
                     text=text,
+                )
+
+                schedule_task_id = (
+                    f'{dialog_manager.event.from_user.id}_'
+                    f'{selected_date}_{time_}'
+                )
+                await schedule_source.delete_schedule(schedule_task_id)
+                logger.info(
+                    'Задача об уведомлении id=%s отменена', schedule_task_id
                 )
 
         times = [t for i, t in enumerate(times) if i not in items]
