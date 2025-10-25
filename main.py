@@ -181,7 +181,6 @@ async def main():
 
 
 if __name__ == '__main__':
-    # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()) #  Убрать при деплое
     asyncio.run(main())
 
     # taskiq worker taskiq_broker.broker:broker -fsd
