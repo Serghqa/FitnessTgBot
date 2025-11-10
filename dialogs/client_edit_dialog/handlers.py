@@ -117,6 +117,7 @@ async def back_group(
 
     await update_data_user(callback, widget, dialog_manager)
     await dialog_manager.done(
+        result=dialog_manager.start_data,
         show_mode=ShowMode.EDIT,
     )
 
@@ -141,4 +142,4 @@ async def update_data_user(
             text='Данные клиента были обновленны',
             show_alert=True,
         )
-        data_user[WORKOUTS] = workout.workouts
+    data_user[WORKOUTS] = workout.workouts

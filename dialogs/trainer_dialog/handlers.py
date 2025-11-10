@@ -24,6 +24,7 @@ from states import ClientEditState, TrainerState, TrainerScheduleStates
 logger = logging.getLogger(__name__)
 
 GROUP = 'group'
+ID = 'id'
 WORKOUT = 'workout'
 WORKOUTS = 'workouts'
 OFFSET = 'offset'
@@ -253,6 +254,20 @@ async def process_result(
     result: dict | None,
     dialog_manager: DialogManager
 ):
+
     if result:
         context: Context = dialog_manager.current_context()
         context.widget_data.update(result)
+
+
+async def update_result_group(
+    start_data: Data,
+    result: dict | None,
+    dialog_manager: DialogManager
+):
+
+    client_id: int = result.get(ID)
+    for client_data in dialog_manager.dialog_data.get(GROUP, []):
+        if client_data.get(ID) == client_id:
+            client_data.update(result)
+            break

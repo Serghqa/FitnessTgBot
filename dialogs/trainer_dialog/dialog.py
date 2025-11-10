@@ -25,6 +25,7 @@ from .handlers import (
     set_frame,
     to_main_window,
     to_schedule_dialog,
+    update_result_group,
 )
 
 
@@ -105,6 +106,7 @@ trainer_dialog = Dialog(
         ),
         MAIN_MENU,
         getter=get_data_group,
+        on_process_result=update_result_group,
         state=TrainerState.group,
     ),
     on_process_result=process_result,
