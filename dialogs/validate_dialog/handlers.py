@@ -15,7 +15,7 @@ from timezones import get_time_zones
 
 from typing import Callable
 
-#  from config import load_config, Config
+from config import load_config, Config
 from db import (
     add_client,
     add_trainer,
@@ -148,13 +148,13 @@ async def on_trainer(
 
 def trainer_validate(type_factory: Callable):
 
-    #  config: Config = load_config()
+    config: Config = load_config()
 
     @wraps(type_factory)
     def wrapper(code: str):
 
-        #  if code != config.tg_bot.IS_TRAINER:
-        #    raise ValueError
+        if code != config.tg_bot.IS_TRAINER:
+            raise ValueError
         result = type_factory(code)
         return result
 

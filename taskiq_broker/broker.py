@@ -1,5 +1,3 @@
-import taskiq_aiogram
-
 from nats.js.api import RetentionPolicy, StreamConfig
 
 from taskiq import TaskiqScheduler
@@ -13,18 +11,12 @@ stream_config = StreamConfig(
 )
 
 broker = PullBasedJetStreamBroker(
-    servers="nats://localhost:4222",
+    servers="nats://nats:4222",
     queue='taskiq_queue',
     stream_config=stream_config,
     )
 
-taskiq_aiogram.init(
-        broker=broker,
-        dispatcher='main:dp',
-        bot='main:bot',
-    )
-
-schedule_source = RedisScheduleSource("redis://localhost:6379/0")
+schedule_source = RedisScheduleSource("redis://redis:6379/0")
 
 scheduler = TaskiqScheduler(
     broker=broker,

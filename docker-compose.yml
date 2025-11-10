@@ -1,0 +1,119 @@
+services:
+  bot:
+    image: bot
+    env_file: .env
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    depends_on:
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-net
+  postgres:
+    image: postgres:17.4-alpine
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    networks:
+      - app-net
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6379:6379"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    volumes:
+      - ./redis/data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - app-net
+  nats:
+    image: nats:2.11.1-alpine
+    entrypoint: /usr/local/bin/nats-server -js
+    command: ["-c", "/config/server.conf"]
+    restart: unless-stopped
+    volumes:
+      - ./nats/data:/data
+      - ./nats/config/server.conf:/config/server.conf
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/varz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-net
+  worker:
+    image: bot
+    command: ["taskiq", "worker", "-fsd", "taskiq_broker.broker:broker"]
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    networks:
+      - app-net
+  scheduler:
+    image: bot
+    command: ["taskiq", "scheduler", "-fsd", "taskiq_broker.broker:scheduler"]
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    networks:
+      - app-net
+networks:
+  app-net:
+    driver: bridge

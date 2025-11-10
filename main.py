@@ -2,6 +2,7 @@ import asyncio
 import dialogs
 import logging
 import logging.config
+import taskiq_aiogram
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.fsm.storage.redis import RedisStorage, DefaultKeyBuilder
@@ -20,7 +21,6 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     AsyncEngine
 )
-
 from taskiq_redis import RedisScheduleSource
 
 from taskiq.scheduler.scheduled_task import ScheduledTask
@@ -69,8 +69,8 @@ async def create_tables(engine: AsyncEngine):
     logger.info('Запуск процесса создания таблиц базы данных')
 
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        #  await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all, checkfirst=True)
 
         logger.info('Таблицы успешно созданны')
 
@@ -103,8 +103,8 @@ def create_engine(config: Config) -> AsyncEngine:
     engine: AsyncEngine = create_async_engine(
         url=(
             f'postgresql+asyncpg://'
-            f'{config.data_base.NAME}:{config.data_base.PASSWORD}@'
-            f'{config.data_base.HOST}/fitness'
+            f'{config.data_base.USER}:{config.data_base.PASSWORD}@'
+            f'{config.data_base.HOST}/{config.data_base.NAME}'
         ),
         echo=False,
     )
@@ -138,9 +138,15 @@ def setting_dispatcher(dispatcher: Dispatcher) -> None:
 config: Config = load_config()
 engine: AsyncEngine = create_engine(config)
 Session = create_async_sessionmaker(engine)
+
 broker.add_dependency_context({'session': Session})
 
-redis = Redis(host='localhost')
+redis = Redis(
+    host='redis',
+    port=6379,
+    db=0,
+    socket_connect_timeout=3
+)
 storage = RedisStorage(
     redis=redis,
     key_builder=DefaultKeyBuilder(with_destiny=True)
@@ -151,6 +157,12 @@ setting_dispatcher(dispatcher=dp)
 bot = Bot(
     token=config.tg_bot.TOKEN,
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+)
+
+taskiq_aiogram.init(
+    broker=broker,
+    dispatcher=dp,
+    bot=bot,
 )
 
 

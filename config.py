@@ -10,9 +10,10 @@ class TgBot:
 
 @dataclass
 class DbConfig:
-    NAME: str
+    USER: str
     PASSWORD: str
     HOST: str
+    NAME: str
 
 
 @dataclass
@@ -44,9 +45,10 @@ def load_config(path: str | None = None) -> Config:
             env('IS_TRAINER'),
         ),
         data_base=DbConfig(
-            env('NAME'),
-            env('PASSWORD'),
-            env('HOST'),
+            env('POSTGRES_USER'),
+            env('POSTGRES_PASSWORD'),
+            env('POSTGRES_HOST'),
+            env('POSTGRES_DB'),
         ),
         nats=NatsConfig(servers=env.list('NATS_SERVERS')),
         nats_consumer=NatsConsumerConfig(
