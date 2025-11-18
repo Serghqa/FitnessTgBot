@@ -1,7 +1,6 @@
 import logging
 
 from aiogram.types import CallbackQuery
-
 from aiogram_dialog import DialogManager, ShowMode
 from aiogram_dialog.api.entities.context import Context
 from aiogram_dialog.api.internal import RawKeyboard
@@ -25,13 +24,9 @@ from aiogram_dialog.widgets.kbd.calendar_kbd import (
     CalendarUserConfig,
 )
 from aiogram_dialog.widgets.text import Format, Text
-
 from babel.dates import get_day_names, get_month_names
-
 from datetime import date, datetime, time, timedelta
-
 from taskiq.scheduler.scheduled_task import ScheduledTask
-
 from zoneinfo import ZoneInfo
 
 from db import (
@@ -431,7 +426,8 @@ async def exist_sign(
 
         date_notification = datetime.combine(
             date=date.fromisoformat(date_)-timedelta(days=1),
-            time=time(hour=12, minute=00, tzinfo=ZoneInfo(timezone)),
+            time=time(hour=13, minute=45),
+            tzinfo=ZoneInfo(timezone),
         )
 
         if date_notification > today:

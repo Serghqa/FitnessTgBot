@@ -1,20 +1,15 @@
 import logging
 
 from aiogram.types import CallbackQuery, Message
-
 from aiogram_dialog import DialogManager, StartMode, ShowMode
 from aiogram_dialog.api.entities.context import Context
 from aiogram_dialog.widgets.kbd import Button
 from aiogram_dialog.widgets.input import ManagedTextInput
-
 from functools import wraps
-
 from string import ascii_lowercase, digits
-
-from timezones import get_time_zones
-
 from typing import Callable
 
+from timezones import get_time_zones
 from config import load_config, Config
 from db import (
     add_client,

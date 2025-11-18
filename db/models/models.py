@@ -1,8 +1,6 @@
 from datetime import date as dt
-
 from sqlalchemy import BigInteger, Date, ForeignKey, Integer,  String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
 from typing import Any
 
 

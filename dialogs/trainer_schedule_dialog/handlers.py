@@ -1,7 +1,6 @@
 import logging
 
 from aiogram.types import CallbackQuery
-
 from aiogram_dialog import Data, DialogManager, ShowMode
 from aiogram_dialog.api.entities.context import Context
 from aiogram_dialog.api.internal import RawKeyboard
@@ -25,13 +24,9 @@ from aiogram_dialog.widgets.kbd.calendar_kbd import (
     CalendarUserConfig,
 )
 from aiogram_dialog.widgets.text import Format, Text
-
 from babel.dates import get_day_names, get_month_names
-
 from datetime import date, datetime
-
 from zoneinfo import ZoneInfo
-
 from typing import Callable, Literal, TypeVar
 
 from db import (

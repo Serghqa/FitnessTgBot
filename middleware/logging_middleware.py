@@ -1,10 +1,8 @@
 import logging
 
 from typing import Callable, Awaitable, Dict, Any
-
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
-
 from aiogram_dialog import DialogManager
 from aiogram_dialog.api.entities.context import Context
 

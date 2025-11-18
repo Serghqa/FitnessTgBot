@@ -1,14 +1,11 @@
 import logging
 
 from aiogram.types import CallbackQuery
-
 from aiogram_dialog import DialogManager
-
+from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
-from datetime import datetime
 
 from db.models import (
     Client,

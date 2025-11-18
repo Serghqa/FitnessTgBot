@@ -5,8 +5,8 @@ from aiogram.exceptions import TelegramForbiddenError
 from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from typing import Annotated
 from taskiq import Context, TaskiqDepends
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from db import Schedule, TrainerSchedule
@@ -20,8 +20,10 @@ logger = logging.getLogger(__name__)
 async def send_scheduled_notification(
     chat_id: int,
     message_text: str,
-    bot: Bot = TaskiqDepends(),
+    context: Annotated[Context, TaskiqDepends()]
 ):
+
+    bot: Bot = context.broker.custom_dependency_context.get('bot')
 
     try:
         await bot.send_message(chat_id, message_text)
@@ -31,31 +33,31 @@ async def send_scheduled_notification(
 
 
 @broker.task(task_name='clear_old_data')
-async def clear_old_data(context: Annotated[Context, TaskiqDepends()]):
+async def clear_old_data(
+    context: Annotated[Context, TaskiqDepends()]
+):
 
-    Session: async_sessionmaker = \
+    session: async_sessionmaker = \
         context.broker.custom_dependency_context.get('session')
 
-    async with Session() as session:
+    async with session() as session:
 
         date_ = datetime.now(ZoneInfo('UTC')).date()
-
         stmt = (
             select(Schedule)
-            .where(Schedule.date > date_)
+            .where(Schedule.date < date_)
         )
+
         result = await session.execute(stmt)
         for schedule in result.scalars():
             await session.delete(schedule)
         logger.info('Устаревшие данные из таблицы Schedule очищены')
-
         stmt = (
             select(TrainerSchedule)
-            .where(TrainerSchedule.date > date_)
+            .where(TrainerSchedule.date < date_)
         )
         result = await session.execute(stmt)
         for trainer_schedule in result.scalars():
             await session.delete(trainer_schedule)
         logger.info('Устаревшие данные из таблицы TrainerSchedule очищены')
-
         await session.commit()

@@ -1,7 +1,6 @@
 import logging
 
 from aiogram.types import CallbackQuery, Message
-
 from aiogram_dialog import DialogManager, ShowMode
 from aiogram_dialog.widgets.input import ManagedTextInput
 from aiogram_dialog.widgets.kbd import Button, SwitchTo

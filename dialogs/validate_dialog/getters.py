@@ -2,9 +2,7 @@ import logging
 
 from aiogram_dialog import DialogManager
 from aiogram_dialog.api.entities.context import Context
-
 from datetime import datetime
-
 from zoneinfo import ZoneInfo
 
 from timezones import get_time_zones

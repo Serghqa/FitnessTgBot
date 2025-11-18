@@ -82,7 +82,7 @@ services:
       - app-net
   worker:
     image: bot
-    command: ["taskiq", "worker", "-fsd", "taskiq_broker.broker:broker"]
+    command: ["taskiq", "worker", "-fsd", "taskiq_broker.taskiq_run:broker"]
     env_file: .env
     restart: unless-stopped
     depends_on:
@@ -99,7 +99,7 @@ services:
       - app-net
   scheduler:
     image: bot
-    command: ["taskiq", "scheduler", "-fsd", "taskiq_broker.broker:scheduler"]
+    command: ["taskiq", "scheduler", "-fsd", "taskiq_broker.taskiq_run:scheduler"]
     env_file: .env
     restart: unless-stopped
     depends_on:

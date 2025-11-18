@@ -10,7 +10,6 @@ from aiogram_dialog.widgets.kbd import (
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.enums import ContentType
-
 from operator import itemgetter
 
 from states import TrainerState

@@ -1,12 +1,10 @@
 import logging
 
 from aiogram.types import CallbackQuery, Message
-
 from aiogram_dialog import Data, DialogManager, ShowMode
 from aiogram_dialog.api.entities.context import Context
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, ManagedRadio, Select, SwitchTo
-
 from typing import Literal
 
 from db import (

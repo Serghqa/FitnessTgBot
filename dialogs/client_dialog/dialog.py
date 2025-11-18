@@ -1,8 +1,6 @@
 import logging
 
-
 from aiogram import F
-
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.kbd import (
     Button,
@@ -12,11 +10,9 @@ from aiogram_dialog.widgets.kbd import (
     SwitchTo,
 )
 from aiogram_dialog.widgets.text import Const, Format
-
 from operator import itemgetter
 
 from .getters import get_data_radio, get_data_selected, get_exist_data
-
 from .handlers import (
     cancel_training,
     clear_data,
@@ -29,7 +25,6 @@ from .handlers import (
     set_calendar,
     set_client_trainings,
 )
-
 from states import ClientState
 
 

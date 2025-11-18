@@ -3,12 +3,10 @@ import logging
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message
-
 from aiogram_dialog import (
     DialogManager,
     StartMode,
 )
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import Client, get_user, Trainer
