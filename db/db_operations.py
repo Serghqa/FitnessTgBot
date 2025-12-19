@@ -1,24 +1,18 @@
 import logging
 
-from aiogram.types import CallbackQuery
 from aiogram_dialog import DialogManager
-from datetime import date, datetime, timedelta
+from datetime import datetime
 from sqlalchemy import exists, select
-from sqlalchemy.exc import SQLAlchemyError, UnboundExecutionError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from db import (
-    Base,
     Client,
     RelationUsers,
     set_relation_users,
     Schedule,
-    set_client,
     set_schedule,
-    set_trainer,
     set_trainer_schedule,
-    set_workout,
     set_work_day,
     Trainer,
     TrainerSchedule,

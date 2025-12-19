@@ -715,6 +715,11 @@ async def apply_selected(
             data: dict = _transform_time(str_time)
             dialog_manager.dialog_data[SELECTED_DATES][date_selected] = data
 
+    _update_selected_dates(
+        selected=selected_dates,
+        today=today.date().isoformat(),
+    )
+
 
 async def set_radio_work(
     callback: CallbackQuery,
