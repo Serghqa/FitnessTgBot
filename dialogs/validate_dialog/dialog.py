@@ -111,16 +111,18 @@ validate_dialog = Dialog(
         Const(
             text='Ваши группы',
         ),
-        Radio(
-            Format(
-                text='☑️ {item[0]}',
+        Column(
+            Radio(
+                Format(
+                    text='☑️ {item[0]}',
+                ),
+                Format(
+                    text='⬜ {item[0]}',
+                ),
+                id='radio_group',
+                item_id_getter=itemgetter(1),
+                items='radio',
             ),
-            Format(
-                text='⬜ {item[0]}',
-            ),
-            id='radio_group',
-            item_id_getter=itemgetter(1),
-            items='radio',
         ),
         Button(
             Const(
@@ -130,7 +132,16 @@ validate_dialog = Dialog(
             on_click=on_trainer,
             when='is_checked',
         ),
-        MAIN_MENU,
+        Row(
+            MAIN_MENU,
+            SwitchTo(
+                Const(
+                    text='Добавить тренера'
+                ),
+                id='add_trainer',
+                state=StartSG.client,
+            ),
+        ),
         state=StartSG.group,
         getter=get_radio_data,
     ),

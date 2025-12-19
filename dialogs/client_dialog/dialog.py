@@ -12,7 +12,12 @@ from aiogram_dialog.widgets.kbd import (
 from aiogram_dialog.widgets.text import Const, Format
 from operator import itemgetter
 
-from .getters import get_data_radio, get_data_selected, get_exist_data
+from .getters import (
+    get_data_radio,
+    get_data_selected,
+    get_data_today,
+    get_exist_data,
+)
 from .handlers import (
     cancel_training,
     clear_data,
@@ -21,9 +26,9 @@ from .handlers import (
     exist_sign,
     on_date,
     on_date_selected,
-    reset_widget,
+    back_trainings,
     set_calendar,
-    set_client_trainings,
+    set_trainings,
 )
 from states import ClientState
 
@@ -39,11 +44,10 @@ client_dialog = Dialog(
         Const(
             text='Главное окно клиента',
         ),
-        SwitchTo(
+        Button(
             text=Const('Тренировки'),
             id='sign',
             on_click=set_calendar,
-            state=ClientState.schedule,
         ),
         state=ClientState.main,
     ),
@@ -62,11 +66,10 @@ client_dialog = Dialog(
                 on_click=clear_data,
                 state=ClientState.main,
             ),
-            SwitchTo(
+            Button(
                 text=Const('Мои записи'),
                 id='my_sign',
-                on_click=set_client_trainings,
-                state=ClientState.my_sign_up,
+                on_click=set_trainings,
             ),
         ),
         state=ClientState.schedule,
@@ -90,16 +93,14 @@ client_dialog = Dialog(
             item_id_getter=itemgetter(1),
         ),
         Row(
-            SwitchTo(
+            Button(
                 text=Const('Назад'),
                 id='back_cal',
                 on_click=set_calendar,
-                state=ClientState.schedule,
             ),
-            SwitchTo(
+            Button(
                 text=Const('Записаться'),
                 id='sign',
-                state=ClientState.sign_up,
                 on_click=exist_sign,
                 when=F[WORKOUTS],
             ),
@@ -113,13 +114,12 @@ client_dialog = Dialog(
             when=F[EXIST],
         ),
         Format(
-            text='Это время уже недоступно',
+            text='Этого времени не существует или оно уже занято.',
             when=~F[EXIST],
         ),
-        SwitchTo(
+        Button(
             text=Const('Назад'),
             id='back_exist',
-            state=ClientState.sign_training,
             on_click=set_calendar,
         ),
         state=ClientState.sign_up,
@@ -133,10 +133,9 @@ client_dialog = Dialog(
             id='my_train',
             on_click=on_date,
         ),
-        SwitchTo(
+        Button(
             text=Const('Назад'),
             id='can_my_tr',
-            state=ClientState.schedule,
             on_click=set_calendar,
         ),
         state=ClientState.my_sign_up,
@@ -155,11 +154,10 @@ client_dialog = Dialog(
             ),
         ),
         Row(
-            SwitchTo(
+            Button(
                 text=Const('Назад'),
                 id='canc_sel',
-                on_click=reset_widget,
-                state=ClientState.my_sign_up,
+                on_click=back_trainings,
             ),
             Button(
                 text=Const('❗Отменить запись(и)'),
@@ -170,5 +168,20 @@ client_dialog = Dialog(
         ),
         getter=get_data_selected,
         state=ClientState.cancel_training,
+    ),
+    Window(
+        Format(
+            text='Сегодня {today}',
+        ),
+        Format(
+            text='{text}'
+        ),
+        Button(
+            text=Const('Назад'),
+            id='back_sch',
+            on_click=set_trainings,
+        ),
+        getter=get_data_today,
+        state=ClientState.today,
     ),
 )

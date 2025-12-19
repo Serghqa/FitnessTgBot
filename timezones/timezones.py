@@ -17,10 +17,10 @@ timezones = (
 )
 
 
-def get_time_zones() -> list[str]:
-    return [tz for tz in timezones]
+def get_current_datetime(timezone: str) -> datetime:
+    """
+    Возвращает текущую дату и время в указанном часовом поясе.
+    """
 
-
-def get_current_date(timezone: str) -> datetime:
     tz = ZoneInfo(timezone)
     return datetime.now(tz)

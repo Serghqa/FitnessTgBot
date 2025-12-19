@@ -29,11 +29,11 @@ from .handlers import (
     process_start,
     process_result,
     reset_calendar,
-    reset_checked,
-    set_radio_calendar,
-    set_checked,
-    set_radio_work,
+    reset_checked_multiselect,
     revoke,
+    set_checked_radio,
+    set_radio_work,
+    to_calendar,
 )
 from states import TrainerScheduleStates
 
@@ -66,11 +66,10 @@ trainer_schedule_dialog = Dialog(
             on_click=set_radio_work,
             state=TrainerScheduleStates.work,
         ),
-        SwitchTo(
+        Button(
             Const('Редактор расписания'),
             id='to_cal',
-            on_click=set_radio_calendar,
-            state=TrainerScheduleStates.schedule,
+            on_click=to_calendar,
         ),
         Button(
             text=Const('Назад'),
@@ -119,11 +118,10 @@ trainer_schedule_dialog = Dialog(
             ),
         ),
         Row(
-            SwitchTo(
+            Button(
                 text=Const('Назад'),
                 id='canc_sel',
                 on_click=revoke,
-                state=TrainerScheduleStates.schedule,
             ),
             Button(
                 text=Const('❗Отменить запись(и)'),
@@ -147,11 +145,10 @@ trainer_schedule_dialog = Dialog(
                 'Все клиенты у, которых есть запись, будут отменены.'
             ),
         ),
-        SwitchTo(
+        Button(
             Const('Да, отменить'),
             id='can_y',
             on_click=cancel_work,
-            state=TrainerScheduleStates.schedule,
         ),
         SwitchTo(
             Const('Нет, работаем'),
@@ -177,7 +174,7 @@ trainer_schedule_dialog = Dialog(
             SwitchTo(
                 text=Const('Редактировать'),
                 id='ed_work',
-                on_click=set_checked,
+                on_click=set_checked_radio,
                 state=TrainerScheduleStates.edit_work,
             ),
         ),
@@ -200,7 +197,7 @@ trainer_schedule_dialog = Dialog(
             SwitchTo(
                 text=Const('Назад'),
                 id='back_w',
-                on_click=reset_checked,
+                on_click=reset_checked_multiselect,
                 state=TrainerScheduleStates.work,
             ),
             SwitchTo(

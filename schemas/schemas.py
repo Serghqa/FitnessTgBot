@@ -1,5 +1,5 @@
 from datetime import date
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class UserSchema(BaseModel):
@@ -7,27 +7,19 @@ class UserSchema(BaseModel):
     id: int
     name: str
 
+    model_config = ConfigDict(
+        extra='ignore',
+    )
+
 
 class ClientSchema(UserSchema):
 
-    is_client: bool = Field(default=False)
     workouts: int = Field(default=0, ge=0)
-
-    @model_validator(mode='after')
-    def set_is_client(self):
-        self.is_client = True
-        return self
 
 
 class TrainerSchema(UserSchema):
 
-    is_trainer: bool = Field(default=False)
     time_zone: str
-
-    @model_validator(mode='after')
-    def set_is_trainer(self):
-        self.is_trainer = True
-        return self
 
 
 class WorkDaySchema(BaseModel):
@@ -45,7 +37,7 @@ class WorkDaySchema(BaseModel):
 
     @model_validator(mode='after')
     def is_item(self):
-        if self.item.isdigit() and 0 < int(self.item) < 4:
+        if isinstance(self.item, str) and 0 < int(self.item) < 4:
             return self
         raise ValueError('item is not valid')
 

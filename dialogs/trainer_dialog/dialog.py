@@ -42,11 +42,10 @@ trainer_dialog = Dialog(
         Const(
             text='Главное окно тренера',
         ),
-        SwitchTo(
+        Button(
             text=Const('Моя группа'),
             id='my_gr',
             on_click=set_frame,
-            state=TrainerState.group,
         ),
         Button(
             text=Const('Рассписание'),

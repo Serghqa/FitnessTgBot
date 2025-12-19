@@ -3,6 +3,7 @@ from datetime import date
 from .models import (
     Base,
     Client,
+    RelationUsers,
     Schedule,
     Trainer,
     TrainerSchedule,
@@ -64,7 +65,7 @@ def set_schedule(
 
 
 def set_work_day(
-    item: int,
+    item: str,
     work: str,
     trainer_id: int
 ) -> WorkingDay:
@@ -89,9 +90,28 @@ def set_trainer_schedule(
     )
 
 
+def set_relation_users(
+    trainer_id: int,
+    client_id: int
+) -> RelationUsers:
+
+    return RelationUsers(
+        trainer_id=trainer_id,
+        client_id=client_id,
+    )
+
+
 __all__ = [
     Base,
+    Client,
+    RelationUsers,
+    Schedule,
+    Trainer,
+    TrainerSchedule,
+    WorkingDay,
+    Workout,
     set_client,
+    set_relation_users,
     set_schedule,
     set_trainer,
     set_trainer_schedule,

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from aiogram import Router, F
@@ -7,7 +8,7 @@ from aiogram_dialog import (
     DialogManager,
     StartMode,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 from db import Client, get_user, Trainer
 from schemas import ClientSchema, TrainerSchema
@@ -26,32 +27,48 @@ async def command_start(
         dialog_manager: DialogManager
 ):
 
-    session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
-
     user_data = {}
 
     user_id: int = dialog_manager.event.from_user.id
 
-    client: Client = await get_user(
-        session=session,
-        user_id=user_id,
-        model=Client,
-    )
-    trainer: Trainer = await get_user(
-        session=session,
-        user_id=user_id,
-        model=Trainer,
-    )
+    try:
+        client: Client | None
+        trainer: Trainer | None
+
+        client, trainer = await asyncio.gather(
+            get_user(
+                dialog_manager=dialog_manager,
+                user_id=user_id,
+                model=Client,
+            ),
+            get_user(
+                dialog_manager=dialog_manager,
+                user_id=user_id,
+                model=Trainer,
+            )
+        )
+    except SQLAlchemyError as error:
+        logger.error(
+            'Ошибка при попытке получить объект Trainer или Client, '
+            'user_id=%s, path=%s',
+            user_id, __name__,
+            exc_info=error,
+        )
+
+        await message.answer(
+            text='Произошла неожиданная ошибка, обратитесь в поддержку.'
+        )
+        return
 
     for user in (client, trainer):
         if user:
             if isinstance(user, Client):
                 user_data.update(
-                    ClientSchema(**user.get_data()).model_dump(),
+                    ClientSchema.model_validate(user.get_data()).model_dump(),
                 )
-            if isinstance(user, Trainer):
+            elif isinstance(user, Trainer):
                 user_data.update(
-                    TrainerSchema(**user.get_data()).model_dump(),
+                    TrainerSchema.model_validate(user.get_data()).model_dump(),
                 )
 
     await dialog_manager.start(
