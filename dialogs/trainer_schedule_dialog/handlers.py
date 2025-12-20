@@ -415,6 +415,9 @@ async def on_date_selected(
                     )
 
         else:
+            if today.date() == clicked_date:
+                return
+
             widget_item: Literal['1', '2', '3'] = \
                 _get_current_widget_context(
                     dialog_manager=dialog_manager,
