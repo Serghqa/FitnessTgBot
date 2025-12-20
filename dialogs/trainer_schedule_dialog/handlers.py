@@ -103,6 +103,8 @@ class MarkedDay(Text):
         selected = dialog_manager.dialog_data.get(SELECTED_DATES, {})
 
         if serial_date in selected:
+            if self.mark == '⭕':
+                return self.mark
             radio_item = selected[serial_date]
             if isinstance(radio_item, str):
                 return self.mark[int(radio_item)]
@@ -255,7 +257,7 @@ def _update_selected_dates(selected: dict, today: str) -> None:
     """
 
     for date_, _ in list(selected.items()):
-        if date_ <= today:
+        if date_ < today:
             selected.pop(date_)
 
 
@@ -354,7 +356,7 @@ async def on_date_selected(
 
     _update_selected_dates(selected, today.date().isoformat())
 
-    if today.date().isoformat() < serial_date:
+    if today.date() <= clicked_date:
 
         if serial_date in selected:
 
@@ -401,10 +403,16 @@ async def on_date_selected(
                     TRAININGS: data_trainings
                 }
 
-                await dialog_manager.switch_to(
-                    state=TrainerScheduleStates.selected_date,
-                    show_mode=ShowMode.EDIT,
-                )
+                if today.date() == clicked_date:
+                    await dialog_manager.switch_to(
+                        state=TrainerScheduleStates.trainer_today,
+                        show_mode=ShowMode.EDIT,
+                    )
+                else:
+                    await dialog_manager.switch_to(
+                        state=TrainerScheduleStates.selected_date,
+                        show_mode=ShowMode.EDIT,
+                    )
 
         else:
             widget_item: Literal['1', '2', '3'] = \
@@ -688,13 +696,16 @@ async def apply_selected(
     trainer_schedules: dict = {
         date_selected: data for date_selected, data in selected_dates.items()
         if isinstance(data, str) and today.date().isoformat() < date_selected
-    }
+    }  # {'2025-12-12': '1', '2025-12-13': '2', ...}
+    work_schedules: dict[str, str] = \
+        dialog_manager.start_data[SCHEDULES]  # {'1': '11,12,..', '2': '11,..}
 
     if trainer_schedules:
         try:
             await add_trainer_schedule(
                 dialog_manager=dialog_manager,
                 trainer_schedules=trainer_schedules,
+                work_schedules=work_schedules,
             )
         except SQLAlchemyError as error:
             logger.error(

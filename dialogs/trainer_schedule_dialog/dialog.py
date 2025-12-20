@@ -16,6 +16,7 @@ from .getters import (
     get_data_radio,
     get_multiselect_data,
     selection_getter,
+    today_getter,
 )
 from .handlers import (
     apply_selected,
@@ -61,13 +62,13 @@ trainer_schedule_dialog = Dialog(
             text='Главное окно расписания',
         ),
         SwitchTo(
-            Const('Редактор смены'),
+            text=Const('Редактор смены'),
             id='to_work',
             on_click=set_radio_work,
             state=TrainerScheduleStates.work,
         ),
         Button(
-            Const('Редактор расписания'),
+            text=Const('Редактор расписания'),
             id='to_cal',
             on_click=to_calendar,
         ),
@@ -146,12 +147,12 @@ trainer_schedule_dialog = Dialog(
             ),
         ),
         Button(
-            Const('Да, отменить'),
+            text=Const('Да, отменить'),
             id='can_y',
             on_click=cancel_work,
         ),
         SwitchTo(
-            Const('Нет, работаем'),
+            text=Const('Нет, работаем'),
             id='can_n',
             state=TrainerScheduleStates.selected_date,
         ),
@@ -209,6 +210,21 @@ trainer_schedule_dialog = Dialog(
         ),
         getter=get_multiselect_data,
         state=TrainerScheduleStates.edit_work,
+    ),
+    Window(
+        Format(
+            text='{today}'
+        ),
+        Format(
+            text='{text}'
+        ),
+        Button(
+            text=Const('Назад'),
+            id='back_tod',
+            on_click=revoke,
+        ),
+        getter=today_getter,
+        state=TrainerScheduleStates.trainer_today,
     ),
     on_start=process_start,
 )

@@ -360,7 +360,8 @@ async def update_working_day(
 
 async def add_trainer_schedule(
     dialog_manager: DialogManager,
-    trainer_schedules: dict
+    trainer_schedules: dict,
+    work_schedules: dict
 ) -> None:
     """
     Добавляет расписания тренера в базу данных на
@@ -369,12 +370,14 @@ async def add_trainer_schedule(
 
     session: AsyncSession = dialog_manager.middleware_data.get(SESSION)
 
+    trainer_id: int = dialog_manager.event.from_user.id
+
     for date_selected, work_item in trainer_schedules.items():
         dt = datetime.fromisoformat(date_selected)
         trainer_schedule: TrainerSchedule = set_trainer_schedule(
             date=dt.date(),
-            time=dialog_manager.start_data[SCHEDULES][work_item],
-            trainer_id=dialog_manager.event.from_user.id,
+            time=work_schedules[work_item],
+            trainer_id=trainer_id,
         )
         session.add(trainer_schedule)
 
@@ -575,7 +578,7 @@ async def get_trainer_schedules(
         .join(Trainer)
         .where(
             Trainer.id == trainer_id,
-            TrainerSchedule.date > today.date()
+            TrainerSchedule.date >= today.date()
         )
         .order_by(TrainerSchedule.date)
     )

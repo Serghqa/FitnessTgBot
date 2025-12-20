@@ -9,6 +9,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 CLIENT_NAME = 'client_name'
+CLIENT_ID = 'client_id'
 DATE = 'date'
 IS_APPLY = 'is_apply'
 IS_CANCEL = 'is_cancel'
@@ -117,7 +118,7 @@ async def get_current_schedule(
 
     context: Context = dialog_manager.current_context()
 
-    selected_date: dict[str, str] = \
+    selected_date: str = \
         dialog_manager.dialog_data[SELECTED_DATE][DATE]
     trainings: list[dict] = \
         dialog_manager.dialog_data[SELECTED_DATE][TRAININGS]
@@ -133,3 +134,37 @@ async def get_current_schedule(
         ROWS: rows,
         IS_CANCEL: is_cancel
     }
+
+
+async def today_getter(
+    dialog_manager: DialogManager,
+    **kwargs
+) -> dict:
+    """
+    Функция форматирует данные о тренировках на выбранную
+    дату для отображения тренеру. Извлекает информацию о
+    клиентах и времени тренировок.
+    """
+
+    selected_date: str = \
+        dialog_manager.dialog_data[SELECTED_DATE][DATE]
+    trainings: list[dict] = \
+        dialog_manager.dialog_data[SELECTED_DATE][TRAININGS]
+
+    tmp = []
+
+    for training in trainings:
+        client_id: int = training[CLIENT_ID]
+        client_name: str = training[CLIENT_NAME]
+        time: int = training[TIME]
+
+        message = \
+            f'• client_id={client_id} client_name={client_name} {time:02d}:00'
+        tmp.append(message)
+    text = '\n'.join(tmp)
+
+    data = {
+        'today': selected_date,
+        'text': text
+    }
+    return data
