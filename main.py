@@ -79,8 +79,8 @@ def setting_dispatcher(dispatcher: Dispatcher) -> None:
     dispatcher.update.middleware(DbSessionMiddleware(Session))
 
     router: Router = dialogs.setup_all_dialogs(Router)
-    router.callback_query.middleware(LoggingMiddleware())
-    router.message.middleware(LoggingMiddleware())
+    # router.callback_query.middleware(LoggingMiddleware())
+    # router.message.middleware(LoggingMiddleware())
 
     dispatcher.include_routers(router)
     setup_dialogs(dispatcher)
