@@ -29,7 +29,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     logging:
       driver: json-file
       options:
@@ -46,7 +46,7 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     logging:
       driver: json-file
       options:
@@ -66,8 +66,8 @@ services:
       - ./nats/data:/data
       - ./nats/config/server.conf:/config/server.conf
     ports:
-      - "4222:4222"
-      - "8222:8222"
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:8222:8222"
     logging:
       driver: json-file
       options:
