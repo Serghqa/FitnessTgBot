@@ -1,5 +1,3 @@
-import logging
-
 from aiogram_dialog import DialogManager
 from datetime import datetime
 from sqlalchemy import exists, select
@@ -22,8 +20,6 @@ from db import (
 from schemas import ScheduleSchema
 from timezones import get_current_datetime
 
-
-logger = logging.getLogger(__name__)
 
 CLIENT_ID = 'client_id'
 DATE = 'date'
